@@ -28,6 +28,13 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      - name: Generate app icons
+        run: |
+          base64 -d assets/icon.png.b64 > assets/icon.png
+          base64 -d assets/icon-background.png.b64 > assets/icon-background.png
+          npm install @capacitor/assets
+          npx @capacitor/assets generate --android
+
       - name: Build debug APK
         run: |
           cd android
