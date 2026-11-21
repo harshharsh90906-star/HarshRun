@@ -13,6 +13,7 @@ workflows:
           npx cap sync ios
       - name: Build unsigned IPA (no Apple Developer account needed)
         script: |
+          set -e
           cd ios/App
           xcodebuild -workspace App.xcworkspace \
             -scheme App \
@@ -20,10 +21,14 @@ workflows:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
-            archive -archivePath $CM_BUILD_DIR/HarshRun.xcarchive
-          APP_PATH=$(find $CM_BUILD_DIR/HarshRun.xcarchive/Products/Applications -maxdepth 1 -name "*.app" | head -1)
-          mkdir -p $CM_BUILD_DIR/Payload
-          cp -r "$APP_PATH" $CM_BUILD_DIR/Payload/
-          cd $CM_BUILD_DIR && zip -r HarshRun-unsigned.ipa Payload
+            CONFIGURATION_BUILD_DIR="$CM_BUILD_DIR/build" \
+            build
+          APP_PATH="$CM_BUILD_DIR/build/App.app"
+          if [ ! -d "$APP_PATH" ]; then echo "ERROR: App.app not found"; ls -la "$CM_BUILD_DIR/build"; exit 1; fi
+          du -sh "$APP_PATH"
+          mkdir -p "$CM_BUILD_DIR/Payload"
+          cp -r "$APP_PATH" "$CM_BUILD_DIR/Payload/"
+          cd "$CM_BUILD_DIR" && zip -r HarshRun-unsigned.ipa Payload
+          ls -lh HarshRun-unsigned.ipa
     artifacts:
       - HarshRun-unsigned.ipa
