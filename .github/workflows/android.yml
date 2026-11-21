@@ -24,6 +24,7 @@ jobs:
       - name: Install dependencies and add Android
         run: |
           npm ci
+          npm install @capacitor/android@8.6.2
           npx cap add android
           npx cap sync android
 
