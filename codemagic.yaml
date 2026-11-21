@@ -15,8 +15,8 @@ workflows:
         script: |
           set -e
           cd ios/App
-          xcodebuild -workspace App.xcworkspace \
-            -scheme App \
+          xcodebuild -project App.xcodeproj \
+            -target App \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
