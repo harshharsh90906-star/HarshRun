@@ -255,18 +255,39 @@ const S={mode:'menu', lane:0, targetLane:0, x:0, jumpY:0, jumpV:0, sliding:0, ru
 try{ S.best=parseInt(localStorage.getItem('harshRunBest')||'0',10)||0; }catch(e){}
 function saveBest(){ try{ localStorage.setItem('harshRunBest',String(S.best)); }catch(e){} }
 let entities=[], particles=[];
+function disposeObj(obj){
+  if(!obj) return;
+  obj.traverse(function(o){
+    if(o.isSprite){
+      if(o.material){ if(o.material.map) o.material.map.dispose(); o.material.dispose(); }
+      return;
+    }
+    if(o.isMesh){
+      if(o.geometry && o.geometry!==heartGeo) o.geometry.dispose();
+      const mats=Array.isArray(o.material)?o.material:[o.material];
+      for(let i=0;i<mats.length;i++){
+        const m=mats[i];
+        if(!m) continue;
+        if(m===heartMat||m===woodM||m===plankM||m===darkM||partMats.indexOf(m)>=0||flowerMats.indexOf(m)>=0) continue;
+        if(m.map) m.map.dispose();
+        m.dispose();
+      }
+    }
+  });
+}
 function reset(){ S.lane=0;S.targetLane=0;S.x=0;S.jumpY=0;S.jumpV=0;S.sliding=0;S.speed=15;S.dist=0;S.score=0;S.hearts=0;S.combo=0;S.bestCombo=0;S.ancyGap=.82;S.invuln=0;S.shake=0;S.shield=false;S.magnet=0;S.double=0;S.boost=0;S.spawnT=1.4;S.heartT=.9;S.powerT=11;S.time=0;S.milestones={};
   S.strikes=0;S.ancyState='chase';S.ancyT=0;S.catchT=0;S.grabbed=false;S.slowT=0;S.countT=0;S.lastCount=9;S.sorryUsed=false;S.sorryT=0;S.sorryPhase=0;S.secretJumps=0;S.secretLastT=-99;S.secretUsed=false;
   S.winT=0;S.given=0;S.giveTotal=0;S.giveChunk=1;S.giveT=0;S.winShown=false;S.hugDone=false;
   const ws=document.getElementById('winScreen'); if(ws)ws.classList.add('hidden');
   const gh=document.getElementById('giveHud'); if(gh)gh.style.display='none';
-  if(typeof winHearts!=='undefined'){ for(const h of winHearts) scene.remove(h.mesh); winHearts=[]; }
+  if(typeof winHearts!=='undefined'){ for(const h of winHearts){ scene.remove(h.mesh); disposeObj(h.mesh); } winHearts=[]; }
   const cn=document.getElementById('countNum'); if(cn)cn.style.display='none'; hideAncySay();
-  for(const e of entities) scene.remove(e.obj); entities=[];
-  for(const p of particles) scene.remove(p.mesh); particles=[];
+  for(const e of entities){ scene.remove(e.obj); disposeObj(e.obj); } entities=[];
+  for(const p of particles){ scene.remove(p.mesh); disposeObj(p.mesh); } particles=[];
 }
 function toast(msg,ms){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),ms||1900); }
 /* ---------- CHARACTER VOICES — dialogues are SPOKEN out loud, not just text ---------- */
+const _voiceCache={};
 let _voices=[];
 function loadVoices(){ try{ _voices=window.speechSynthesis?speechSynthesis.getVoices():[]; }catch(e){ _voices=[]; } }
 if(window.speechSynthesis){ loadVoices(); try{ speechSynthesis.onvoiceschanged=loadVoices; }catch(e){} }
@@ -325,7 +346,10 @@ function _dlgPlayNext(){
       const clip=VOICE_MAP[item.text];
       if(clip){
         try{
-          const a=new Audio(clip); _dlgAudio=a;
+          let a=_voiceCache[item.text];
+          if(!a){ a=new Audio(clip); _voiceCache[item.text]=a; }
+          try{ a.currentTime=0; }catch(e){}
+          _dlgAudio=a;
           a.onended=function(){ _dlgAudio=null; finishAfter(700); };
           a.onerror=function(){ _dlgAudio=null; finishAfter(dur); };
           const pr=a.play(); if(pr&&pr.catch) pr.catch(function(){ _dlgAudio=null; finishAfter(dur); });
@@ -5074,8 +5098,8 @@ three/build/three.module.js:
 "use strict";
 /* ================= THREE.JS SCENE ================= */
 const stageEl=document.getElementById('stage'), glEl=document.getElementById('gl');
-const renderer=new THREE.WebGLRenderer({antialias:!window.matchMedia('(pointer: coarse)').matches,powerPreference:'high-performance'});
-let curPR=Math.min(window.devicePixelRatio||1,1.5); const minPR=1;
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+let curPR=Math.min(window.devicePixelRatio||1,2.25); const minPR=Math.min(curPR,1.5);
 renderer.setPixelRatio(curPR);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFShadowMap;
@@ -5623,11 +5647,11 @@ function doJump(){ if(S.mode!=='run')return; if(S.jumpY===0){ S.jumpV=S.boost>0?
         burst(S.x*2.3,1.5,0,0,18); sfx.power(); updateHUD(); } } } } }
 function doSlide(){ if(S.mode!=='run')return; if(S.jumpY>0){ S.jumpY=0; S.jumpV=0; } S.sliding=0.55; sfx.slide(); }
 
-function collectHeart(e){ e.got=true; scene.remove(e.obj); const val=S.double>0?2:1; S.hearts+=val; S.combo++; S.bestCombo=Math.max(S.bestCombo,S.combo); S.score+=25*val+Math.min(S.combo,20); S.ancyGap=Math.min(0.92,S.ancyGap+0.006);
+function collectHeart(e){ e.got=true; scene.remove(e.obj); disposeObj(e.obj); const val=S.double>0?2:1; S.hearts+=val; S.combo++; S.bestCombo=Math.max(S.bestCombo,S.combo); S.score+=25*val+Math.min(S.combo,20); S.ancyGap=Math.min(0.92,S.ancyGap+0.006);
   burst(e.obj.position.x,e.obj.position.y,e.obj.position.z,0,7);
   if(S.combo>0&&S.combo%15===0){ S.score+=100; toast('🔥 '+S.combo+' Hearts Combo! +100'); floater(new THREE.Vector3(S.x*2.3,2.4,0),'COMBO x'+S.combo+' 🔥','#ffb347'); if(S.ancyState==='chase') sayLine(pickLine(COMBO_LINES,'combo'),1900); }
   sfx.heart(); }
-function collectPower(e){ e.got=true; scene.remove(e.obj); sfx.power();
+function collectPower(e){ e.got=true; scene.remove(e.obj); disposeObj(e.obj); sfx.power();
   if(e.pk==='magnet'){S.magnet=8;toast('🧲 Heart Magnet — hearts fly to you!');sayLine(pickLine(POWER_LINES.magnet,'pow-magnet'),2100);}
   if(e.pk==='shield'){S.shield=true;toast('🛡️ Shield picked up — one hit free!');sayLine(pickLine(POWER_LINES.shield,'pow-shield'),2100);}
   if(e.pk==='double'){S.double=10;toast('✖️2 Double Hearts — 10 seconds!');sayLine(pickLine(POWER_LINES.double,'pow-double'),1900);}
@@ -5767,7 +5791,7 @@ function update(dt){
     }
     e.obj.position.z=e.z;
   }
-  entities=entities.filter(e=>{ const past=e.type==='train'?(e.z-e.len>9):(e.z>8); if(past||e.got){ if(past) scene.remove(e.obj); return false; } return true; });
+  entities=entities.filter(e=>{ const past=e.type==='train'?(e.z-e.len>9):(e.z>8); if(past||e.got){ if(past){ scene.remove(e.obj); disposeObj(e.obj); } return false; } return true; });
 
   for(let mi=0;mi<MILESTONES.length;mi++){ const m=MILESTONES[mi]; if(S.dist>=m[0]&&!S.milestones[m[0]]){ S.milestones[m[0]]=1; toast(m[1]);
     if(m[0]>=300) sayLine(pickLine(MILE_LINES,'mile'),2200); } }
@@ -5779,7 +5803,7 @@ function stepWorld(dt,scrollSpeed){
   const dz=scrollSpeed*dt;
   for(const seg of segments){ seg.position.z+=dz; if(seg.position.z>6+SEG_LEN) seg.position.z-=SEG_SPAN; }
   for(const p of particles){ p.t+=dt; p.mesh.position.x+=p.vx*dt; p.mesh.position.y+=p.vy*dt; p.mesh.position.z+=p.vz*dt+dz; p.vy-=7*dt; p.mesh.rotation.y+=p.spin*dt; const k=Math.max(0,1-p.t/p.life); p.mesh.scale.setScalar(0.2*k+0.001); }
-  particles=particles.filter(p=>{ if(p.t>=p.life){ scene.remove(p.mesh); return false; } return true; });
+  particles=particles.filter(p=>{ if(p.t>=p.life){ scene.remove(p.mesh); disposeObj(p.mesh); return false; } return true; });
   for(const f of floaterPool){ if(!f.on) continue; f.t+=dt; f.div.style.opacity=String(Math.max(0,1-f.t/0.95)); f.div.style.marginTop=(-f.t*44)+'px'; if(f.t>0.95){ f.on=false; f.div.style.display='none'; } }
 }
 function render(dt){
@@ -5791,7 +5815,7 @@ function render(dt){
   if(menu||over){ S.runPhase+=dt*9; S.time+=dt; }
   if(S.mode==='winseq'){ S.winT+=dt; S.time+=dt; S.runPhase+=dt*9*Math.max(0,1-S.winT/1.1);
     for(const e of entities){ e.z+=scrollSpeed*dt; e.obj.position.z=e.z; }
-    entities=entities.filter(e=>{ const past=e.type==='train'?(e.z-e.len>9):(e.z>8); if(past){ scene.remove(e.obj); return false; } return true; }); }
+    entities=entities.filter(e=>{ const past=e.type==='train'?(e.z-e.len>9):(e.z>8); if(past){ scene.remove(e.obj); disposeObj(e.obj); return false; } return true; }); }
   if(S.mode==='win'){ S.time+=dt; }
   if(S.mode==='count'){ S.countT-=dt; S.time+=dt; S.runPhase+=dt*10;
     const cEl=document.getElementById('countNum'); const c=Math.ceil(S.countT);
@@ -5898,7 +5922,7 @@ function render(dt){
       for(const h of winHearts){ h.t+=dt/0.55;
         h.mesh.position.set(h.fx+(h.tx-h.fx)*h.t, 1.45+Math.sin(Math.min(1,h.t)*Math.PI)*0.55, 0.02);
         h.mesh.rotation.y+=dt*6; }
-      winHearts=winHearts.filter(h=>{ if(h.t>=1){ scene.remove(h.mesh); S.given=Math.min(S.giveTotal,S.given+S.giveChunk); burst(wax,1.5,0,0,2); tone(1250,.07,'sine',.045); return false; } return true; });
+      winHearts=winHearts.filter(h=>{ if(h.t>=1){ scene.remove(h.mesh); disposeObj(h.mesh); S.given=Math.min(S.giveTotal,S.given+S.giveChunk); burst(wax,1.5,0,0,2); tone(1250,.07,'sine',.045); return false; } return true; });
       if(gh.style.display==='block') gh.textContent='💝 Harsh → Ancy · '+S.given+' / '+S.giveTotal+' hearts given';
       if(S.given>=S.giveTotal&&S.winT>4.4&&!winHearts.length) showWin();
     }
