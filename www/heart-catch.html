@@ -561,6 +561,26 @@
           } catch (e) {}
         }
 
+        /* Audio unlock (iOS app / WKWebView): resume the music context + warm the
+           voice on every touch. The old warm-up set loveVoice.volume = 0 and only
+           restored it in the play-promise callbacks — if that promise never settled
+           in the WebView, the voice stayed at volume 0 forever and all dialogue
+           went silent. The setTimeout below guarantees volume comes back. */
+        function warmVoice() {
+          try {
+            loveVoice.volume = 0;
+            var wp = loveVoice.play();
+            var done = function () { try { loveVoice.pause(); loveVoice.currentTime = 0; loveVoice.volume = 1; } catch (e) {} };
+            if (wp && wp.then) { wp.then(done); wp.catch(function () { try { loveVoice.volume = 1; } catch (e) {} }); }
+            setTimeout(function () { try { loveVoice.pause(); loveVoice.currentTime = 0; loveVoice.volume = 1; } catch (e) {} }, 800);
+          } catch (e) { try { loveVoice.volume = 1; } catch (e2) {} }
+        }
+        function unlockAudio() {
+          if (!audioCtx) { startMusic(); }
+          else if (audioCtx.state === "suspended") { audioCtx.resume(); }
+          warmVoice();
+        }
+
         /* ---------------- Game logic ---------------- */
         function spawnHeart() {
           var gold = Math.random() < 0.08;
@@ -673,15 +693,7 @@
         function play() {
           hide(startScreen); hide(endScreen); hide(pauseScreen);
           state = "playing";
-          if (!musicNodes) startMusic();
-          try {
-            loveVoice.volume = 0;
-            var wp = loveVoice.play();
-            if (wp && wp.then) {
-              wp.then(function () { loveVoice.pause(); loveVoice.currentTime = 0; loveVoice.volume = 1; });
-              wp.catch(function () { loveVoice.volume = 1; });
-            } else { loveVoice.volume = 1; }
-          } catch (e) { try { loveVoice.volume = 1; } catch (e2) {} }
+          unlockAudio();
           startLoop();
         }
         function pauseGame() {
@@ -719,6 +731,7 @@
         }
         var dragging = false;
         stage.addEventListener("pointerdown", function (e) {
+          unlockAudio();
           if (state !== "playing") return;
           dragging = true;
           basket.targetX = Math.max(basket.w / 2, Math.min(W - basket.w / 2, pointerX(e)));
@@ -792,7 +805,7 @@
         }
 
         function playCatchSound(gold) {
-          if (!audioCtx) return;
+          if (!audioCtx) { startMusic(); if (!audioCtx) return; }
           if (audioCtx.state === "suspended") audioCtx.resume();
           var t = audioCtx.currentTime;
           function note(freq, delay, dur, vol) {
