@@ -5643,7 +5643,7 @@ function floater(worldPos,txt,color){ let el=floaterPool.find(f=>!f.on);
   const v=worldPos.clone().project(camera); if(v.z>1) return;
   el.div.textContent=txt; el.div.style.color=color||'#ffd166';
   el.div.style.left=((v.x*0.5+0.5)*stageEl.clientWidth)+'px'; el.div.style.top=((-v.y*0.5+0.5)*stageEl.clientHeight)+'px';
-  el.div.style.opacity='1'; el.on=true; el.t=0; el.div.style.display='block'; }
+  el.div.style.transform='translate(-50%,-50%)'; el.div.style.opacity='1'; el.on=true; el.t=0; el.div.style.display='block'; }
 
 
 "use strict";
@@ -5786,7 +5786,7 @@ function update(dt){
     }
     e.obj.position.z=e.z;
   }
-  entities=entities.filter(e=>{ const past=e.type==='train'?(e.z-e.len>9):(e.z>8); if(past||e.got){ if(past){ scene.remove(e.obj); disposeObj(e.obj); } return false; } return true; });
+  for(let i=entities.length-1;i>=0;i--){ const e=entities[i], past=e.type==='train'?(e.z-e.len>9):(e.z>8); if(past||e.got){ if(past){ scene.remove(e.obj); disposeObj(e.obj); } entities.splice(i,1); } }
 
   for(let mi=0;mi<MILESTONES.length;mi++){ const m=MILESTONES[mi]; if(S.dist>=m[0]&&!S.milestones[m[0]]){ S.milestones[m[0]]=1; toast(m[1]);
     if(m[0]>=300) sayLine(pickLine(MILE_LINES,'mile'),2200); } }
@@ -5798,8 +5798,8 @@ function stepWorld(dt,scrollSpeed){
   const dz=scrollSpeed*dt;
   for(const seg of segments){ seg.position.z+=dz; if(seg.position.z>6+SEG_LEN) seg.position.z-=SEG_SPAN; }
   for(const p of particles){ p.t+=dt; p.mesh.position.x+=p.vx*dt; p.mesh.position.y+=p.vy*dt; p.mesh.position.z+=p.vz*dt+dz; p.vy-=7*dt; p.mesh.rotation.y+=p.spin*dt; const k=Math.max(0,1-p.t/p.life); p.mesh.scale.setScalar(0.2*k+0.001); }
-  particles=particles.filter(p=>{ if(p.t>=p.life){ scene.remove(p.mesh); disposeObj(p.mesh); return false; } return true; });
-  for(const f of floaterPool){ if(!f.on) continue; f.t+=dt; f.div.style.opacity=String(Math.max(0,1-f.t/0.95)); f.div.style.marginTop=(-f.t*44)+'px'; if(f.t>0.95){ f.on=false; f.div.style.display='none'; } }
+  for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; if(p.t>=p.life){ scene.remove(p.mesh); disposeObj(p.mesh); particles.splice(i,1); } }
+  for(const f of floaterPool){ if(!f.on) continue; f.t+=dt; f.div.style.opacity=String(Math.max(0,1-f.t/0.95)); f.div.style.transform='translate(-50%,-50%) translateY('+(-f.t*44)+'px)'; if(f.t>0.95){ f.on=false; f.div.style.display='none'; } }
 }
 function render(dt){
   const running=S.mode==='run', menu=S.mode==='menu', over=S.mode==='over';
@@ -5862,7 +5862,10 @@ function render(dt){
   else if(S.mode==='sorry'){ az=0.15; ax=px+0.45; ascale=1.0; }
   else if(S.ancyState==='surge'||S.ancyState==='tripping'){ az=1.5; ascale=1.0; ax=px*0.96; }
   else if(S.ancyState==='gone'){ ancy.root.visible=false; }
-  else if(S.ancyState==='returning'){ const t=1-Math.max(0,S.ancyT)/1.6; az=7.5+(chaseAz-7.5)*t; ascale=0.3+(chaseScale-0.3)*t; }
+  else if(S.ancyState==='returning'){ const t=1-Math.max(0,S.ancyT)/1.6; az=5.0+(chaseAz-5.0)*t; ascale=0.3+(chaseScale-0.3)*t; }
+  /* Safety: Ancy must never get close to the camera (giant at the bottom of the screen).
+     Clamp her distance from the camera, not just her x. Camera z is 8.4 in run mode, 6.9 in catch/sorry. */
+  az=Math.min(az,camera.position.z-3.0);
   { const _ct=(8.4-az)/14.4, _ccx=px*0.55+(px*0.3-px*0.55)*_ct, _hw=Math.tan(camera.fov*0.5*Math.PI/180)*Math.max(1,8.4-az)*camera.aspect*0.95;
     if(_hw>0.7) ax=Math.max(_ccx-_hw+0.75,Math.min(_ccx+_hw-0.75,ax)); }
   ancy.root.position.set(ax,0,az); ancy.root.scale.setScalar(ascale);
@@ -5979,14 +5982,19 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden) pauseGame
 function resize(){ const w=glEl.clientWidth||stageEl.clientWidth, h=glEl.clientHeight||stageEl.clientHeight; if(!w||!h)return; renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix(); }
 window.addEventListener('resize',resize);
 resize(); reset(); updateHUD(); try{ renderer.compile(scene,camera); }catch(e){}
-let last=performance.now(), fpsAcc=0, fpsN=0;
+let last=performance.now(), fpsAcc=0, fpsN=0, goodN=0, downAt=-1e9;
 function loop(now){ requestAnimationFrame(loop); const rawDt=(now-last)/1000||0; const dt=Math.min(rawDt,0.05); last=now;
-  /* adaptive quality: start at the smooth resolution (1.5x) and step UP only
-     when the device proves it holds 50fps; step DOWN if it drops below ~34fps */
+  /* adaptive quality: start at the smooth resolution (1.5x). Step DOWN at once
+     when the device drops below ~34fps (protects smoothness). Step UP only after
+     TWO straight good windows (3s under 50fps) AND 4s since the last step-down,
+     so the resolution never flaps up/down — every change reallocates the render
+     buffer and hitches. setPixelRatio already resizes the buffer, so no extra
+     resize() call is needed. */
   if(rawDt>0&&rawDt<0.25){ fpsAcc+=rawDt; fpsN++;
     if(fpsAcc>=1.5){ const avg=fpsAcc/fpsN; fpsAcc=0; fpsN=0;
-      if(avg>1/34&&curPR>minPR){ curPR=Math.max(minPR,Math.round((curPR-0.25)*100)/100); renderer.setPixelRatio(curPR); resize(); }
-      else if(avg<1/50&&curPR<maxPR){ curPR=Math.min(maxPR,Math.round((curPR+0.25)*100)/100); renderer.setPixelRatio(curPR); resize(); } } }
+      if(avg>1/34&&curPR>minPR){ curPR=Math.max(minPR,Math.round((curPR-0.25)*100)/100); renderer.setPixelRatio(curPR); goodN=0; downAt=now; }
+      else if(avg<1/50&&curPR<maxPR){ goodN++; if(goodN>=2&&now-downAt>4000){ curPR=Math.min(maxPR,Math.round((curPR+0.25)*100)/100); renderer.setPixelRatio(curPR); goodN=0; } }
+      else goodN=0; } }
   try{ if(S.mode!=='pause') render(dt); }catch(err){ const b=document.getElementById('errBox'); if(b&&b.style.display!=='block'){ b.style.display='block'; b.textContent='⚠️ '+(err&&err.message?err.message:err); } }
 }
 requestAnimationFrame(loop);
