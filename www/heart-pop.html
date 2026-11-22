@@ -178,7 +178,7 @@
           <span class="spacer"></span>
           <button class="btn ghost" id="popRestart" type="button">Restart</button>
         </div>
-        <p class="how" style="margin-top:10px;">Kaise khelein: canvas pe <b>drag karke aim</b> karo, <b>chhodo to shoot</b>. Board bharne se pehle saaf karte raho.</p>
+        <p class="how" style="margin-top:10px;">Kaise khelein: canvas pe <b>drag karke aim</b> karo, <b>chhodo to shoot</b>. Board bharne se pehle saaf karte raho. Jitne zyada hearts pop karoge, aim line utni lambi hogi.</p>
       </section>
     </main>
 
@@ -292,7 +292,7 @@
       var R = 27, COLS = 13, ROWS = 13, DY = R * 1.74;
       var DANGER_Y = H - 200, SH_Y = H - 72, SH_X = W / 2;
 
-      var grid, flying, particles, aimAngle, cur, next, score, pops;
+      var grid, flying, particles, rings, tick, aimAngle, cur, next, score, pops;
       var toast = document.getElementById("popToast");
       var scoreEl = document.getElementById("popScore");
       var popsEl = document.getElementById("popPops");
@@ -321,7 +321,7 @@
             grid[r].push(r < 5 ? randOf(COLORS) : null);
           }
         }
-        flying = null; particles = [];
+        flying = null; particles = []; rings = []; tick = 0;
         aimAngle = -Math.PI / 2;
         score = 0; pops = 0;
         cur = randPresent(); next = randPresent();
@@ -387,6 +387,9 @@
           burst(cellX(cell[0], cell[1]), cellY(cell[0]), col, 5);
           grid[cell[0]][cell[1]] = null;
         }
+        var cx = 0, cy = 0;
+        for(var i3 = 0; i3 < group.length; i3++){ cx += cellX(group[i3][0], group[i3][1]); cy += cellY(group[i3][0]); }
+        rings.push({ x: cx / group.length, y: cy / group.length, r: R, life: 1 });
         score += group.length * 10;
         pops++;
         softChime(392 + (pops % 5) * 40);
@@ -443,7 +446,9 @@
       }
 
       function step(){
+        tick++;
         if(flying){
+          if(tick % 2 === 0) particles.push({ x: flying.x, y: flying.y, vx: 0, vy: 0, life: 0.35, color: flying.color, s: 9 });
           flying.x += flying.vx; flying.y += flying.vy;
           if(flying.x < R){ flying.x = R; flying.vx = Math.abs(flying.vx); blip(720, 0.06, 0.05); }
           if(flying.x > W - R){ flying.x = W - R; flying.vx = -Math.abs(flying.vx); blip(720, 0.06, 0.05); }
@@ -463,16 +468,25 @@
           p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life -= 0.02;
           if(p.life <= 0) particles.splice(i, 1);
         }
+        for(var ri = rings.length - 1; ri >= 0; ri--){
+          var rg = rings[ri];
+          rg.r += 3.5; rg.life -= 0.045;
+          if(rg.life <= 0) rings.splice(ri, 1);
+        }
       }
 
       function draw(){
         var g = ctx.createLinearGradient(0, 0, 0, H);
         g.addColorStop(0, "#fff0f3"); g.addColorStop(1, "#ffe3ea");
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        var vg = ctx.createRadialGradient(W / 2, H * 0.3, H * 0.2, W / 2, H / 2, H * 0.75);
+        vg.addColorStop(0, "rgba(255,255,255,0)");
+        vg.addColorStop(1, "rgba(191,36,64,.12)");
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
         /* danger line */
         ctx.save();
-        ctx.strokeStyle = "rgba(191,36,64,.4)"; ctx.lineWidth = 2; ctx.setLineDash([10, 8]);
+        ctx.strokeStyle = "rgba(191,36,64," + (0.3 + 0.15 * Math.sin(tick * 0.05)) + ")"; ctx.lineWidth = 2; ctx.setLineDash([10, 8]);
         ctx.beginPath(); ctx.moveTo(10, DANGER_Y); ctx.lineTo(W - 10, DANGER_Y); ctx.stroke();
         ctx.restore();
         ctx.fillStyle = "rgba(191,36,64,.55)";
@@ -491,7 +505,7 @@
           ctx.strokeStyle = "rgba(43,18,32,.5)"; ctx.lineWidth = 4; ctx.setLineDash([2, 14]);
           ctx.lineCap = "round";
           var ax = SH_X, ay = SH_Y, dx = Math.cos(aimAngle), dy = Math.sin(aimAngle);
-          var remain = 600, guard = 0;
+          var remain = Math.min(400 + pops * 18, 820), guard = 0;
           ctx.beginPath(); ctx.moveTo(ax, ay);
           while(remain > 0 && guard < 4){
             guard++;
@@ -511,9 +525,20 @@
           ctx.restore();
         }
 
-        /* shooter base + current heart */
+        /* shooter — real launcher: metallic ring, dark chamber, aim arrow */
+        ctx.save();
+        var sg = ctx.createRadialGradient(SH_X - 14, SH_Y - 16, 6, SH_X, SH_Y, 46);
+        sg.addColorStop(0, "#ffffff"); sg.addColorStop(0.5, "#c9ccd6"); sg.addColorStop(1, "#7d8190");
+        ctx.fillStyle = sg;
+        ctx.beginPath(); ctx.arc(SH_X, SH_Y, 46, 0, 7); ctx.fill();
+        ctx.strokeStyle = "rgba(43,18,32,.35)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(SH_X, SH_Y, 46, 0, 7); ctx.stroke();
         ctx.fillStyle = "#2b1220";
-        ctx.beginPath(); ctx.arc(SH_X, SH_Y + 34, 40, Math.PI, 0); ctx.fill();
+        ctx.beginPath(); ctx.arc(SH_X, SH_Y, 36, 0, 7); ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 5; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(SH_X, SH_Y);
+        ctx.lineTo(SH_X + Math.cos(aimAngle) * 26, SH_Y + Math.sin(aimAngle) * 26); ctx.stroke();
+        ctx.restore();
         if(!flying){
           drawHeart(ctx, SH_X, SH_Y, R * 0.95, cur);
         }
@@ -527,6 +552,14 @@
           ctx.globalAlpha = Math.max(p.life, 0);
           ctx.fillStyle = p.color;
           heartPath(ctx, p.x, p.y, p.s); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        /* pop rings */
+        for(var ri2 = 0; ri2 < rings.length; ri2++){
+          var rg2 = rings[ri2];
+          ctx.globalAlpha = Math.max(rg2.life, 0) * 0.7;
+          ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(rg2.x, rg2.y, rg2.r, 0, 7); ctx.stroke();
         }
         ctx.globalAlpha = 1;
       }
