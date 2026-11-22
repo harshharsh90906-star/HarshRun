@@ -101,8 +101,8 @@
       .stat b{ color:var(--ink); font-family:"Baloo 2",sans-serif; font-size:19px; }
       .hud .spacer{ flex:1 1 auto; }
       .iconbtn{
-        width:40px; height:40px; border-radius:10px; border:1px solid rgba(127,127,127,.3);
-        background:rgba(127,127,127,.14); color:var(--ink); font-size:17px; cursor:pointer;
+        width:40px; height:40px; border-radius:10px; border:1px solid rgba(255,255,255,.2);
+        background:rgba(18,9,7,.75); color:#fff; font-size:17px; cursor:pointer;
         display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
       }
       .iconbtn:active{ transform:scale(.94); }
@@ -227,6 +227,11 @@
       o.connect(g); g.connect(a.destination);
       o.start(s); o.stop(s + dur + 0.05);
     }
+    /* crisp pop onset (fast pitch drop) + soft chime — the pop feels instant */
+    function popSound(base){
+      sweep(900, 300, 0.08, 0.14);
+      softChime(base);
+    }
     /* soft relaxing chime — slow attack, long fade, no coin-like ding */
     function softChime(base){
       tone(base, 0, 0.9, 0.10);
@@ -249,8 +254,17 @@
       o.start(s); o.stop(s + dur + 0.05);
     }
     function blip(freq, dur, vol){ tone(freq, 0, dur, vol); }
-    /* iOS unlock: first touch opens the audio session so later sounds play instantly, not seconds late */
-    function unlockAudio(){ ac(); tone(440, 0, 0.05, 0.0001); }
+    /* iOS unlock: create + resume the context and play a short silent tone so the
+       audio session wakes up fully. Called on EVERY touch, not just the first,
+       so iOS can never leave the context suspended mid-game (that was the
+       seconds-late sound bug). */
+    function unlockAudio(){
+      var a = ac(); if(!a) return;
+      if(a.state === "suspended"){ a.resume(); }
+      try{ tone(440, 0, 0.4, 0.0001); }catch(e){}
+    }
+
+    ac(); /* create the audio context early, ready to resume on first touch */
 
     function heartPath(ctx, x, y, s){
       ctx.beginPath();
@@ -399,7 +413,7 @@
         floaters.push({ x: cx / group.length, y: cy / group.length, life: 1 });
         score += group.length * 10;
         pops++;
-        softChime(392 + (pops % 5) * 40);
+        popSound(392 + (pops % 5) * 40);
         showToast(toast, nextLine());
 
         /* drop floaters (no longer touching the top) */
@@ -446,7 +460,7 @@
       function shoot(){
         if(flying) return;
         ac();
-        sweep(320, 780, 0.14, 0.09);
+        sweep(320, 780, 0.14, 0.13);
         flying = { x: SH_X, y: SH_Y, vx: Math.cos(aimAngle) * 13, vy: Math.sin(aimAngle) * 13, color: cur };
         cur = next; next = randPresent();
         syncHud();
@@ -457,8 +471,8 @@
         if(flying){
           if(tick % 2 === 0) particles.push({ x: flying.x, y: flying.y, vx: 0, vy: 0, life: 0.35, color: flying.color, s: 9 });
           flying.x += flying.vx; flying.y += flying.vy;
-          if(flying.x < R){ flying.x = R; flying.vx = Math.abs(flying.vx); blip(720, 0.06, 0.05); }
-          if(flying.x > W - R){ flying.x = W - R; flying.vx = -Math.abs(flying.vx); blip(720, 0.06, 0.05); }
+          if(flying.x < R){ flying.x = R; flying.vx = Math.abs(flying.vx); blip(720, 0.06, 0.07); }
+          if(flying.x > W - R){ flying.x = W - R; flying.vx = -Math.abs(flying.vx); blip(720, 0.06, 0.07); }
           var placed = false;
           if(flying.y <= R + 10){ placeBall(flying.x, flying.y); placed = true; }
           if(!placed){
@@ -611,9 +625,11 @@
       }
       var dragging = false;
       cv.addEventListener("pointerdown", function(e){ unlockAudio(); dragging = true; aimAt(pointerPos(e)); cv.setPointerCapture(e.pointerId); });
-      document.addEventListener("pointerdown", unlockAudio, { once: true });
+      document.addEventListener("pointerdown", unlockAudio);
+      document.addEventListener("pointerup", unlockAudio);
+      document.addEventListener("touchstart", unlockAudio, { passive: true });
       cv.addEventListener("pointermove", function(e){ if(dragging) aimAt(pointerPos(e)); });
-      cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); shoot(); } dragging = false; });
+      cv.addEventListener("pointerup", function(e){ unlockAudio(); if(dragging){ aimAt(pointerPos(e)); shoot(); } dragging = false; });
       cv.addEventListener("pointercancel", function(){ dragging = false; });
       document.getElementById("popRestart").addEventListener("click", function(){
         blip(520, 0.08, 0.08);

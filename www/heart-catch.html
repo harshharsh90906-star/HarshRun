@@ -111,6 +111,12 @@
       .icon-btn[aria-pressed="true"] { background: var(--rose); border-color: var(--rose); color: #fff; }
       .icon-btn.menu-btn { background: var(--rose); border-color: var(--rose); color: #fff; }
       .icon-btn:active { transform: scale(0.96); }
+      .iconbtn{
+        width:40px; height:40px; border-radius:10px; border:1px solid rgba(255,255,255,.2);
+        background:rgba(18,9,7,.75); color:#fff; font-size:17px; cursor:pointer;
+        display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
+      }
+      .iconbtn:active{ transform:scale(.94); }
       /* ---------- Message ribbon ---------- */
       .ribbon {
         margin-top: 12px;
@@ -287,10 +293,7 @@
 
       <!-- Menu: left side, a little below the top -->
       <div style="margin:10px 0 0;">
-        <a class="icon-btn menu-btn" href="index.html" aria-label="Back to menu" style="text-decoration:none">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
-          <span>Menu</span>
-        </a>
+        <a class="iconbtn" href="index.html" aria-label="Back to menu">🏠</a>
       </div>
 
       <!-- Message ribbon -->
