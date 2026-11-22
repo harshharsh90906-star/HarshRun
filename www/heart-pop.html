@@ -107,7 +107,6 @@
       }
       .btn:active{ transform:scale(.97); }
       .btn.ghost{ background:transparent; color:var(--rose); border:2px solid var(--rose); }
-      .btn.shoot{ font-size:18px; padding:10px 24px; box-shadow:0 4px 14px rgba(230,57,80,.4); }
       .btn.pick{ background:var(--ink); color:var(--bg); }
       .card.selected .btn.pick{ background:var(--rose); color:#fff; }
       .next-heart{ display:inline-flex; vertical-align:-6px; margin-left:4px; }
@@ -177,10 +176,9 @@
             <span class="next-heart"><svg viewBox="0 0 32 30" aria-hidden="true"><path id="popNextPath" fill="#e63950" d="M16 28C8 21 3 16.5 3 10.8 3 6.4 6.3 3 10.4 3c2.3 0 4.4 1.3 5.6 3.2C17.2 4.3 19.3 3 21.6 3 25.7 3 29 6.4 29 10.8 29 16.5 24 21 16 28z"/></svg></span>
           </span>
           <span class="spacer"></span>
-          <button class="btn shoot" id="popShoot" type="button">❤️ Shoot</button>
           <button class="btn ghost" id="popRestart" type="button">Restart</button>
         </div>
-        <p class="how" style="margin-top:10px;">Kaise khelein: canvas pe <b>drag karke aim</b> karo — line set rahegi — phir <b>❤️ Shoot</b> dabao. Board bharne se pehle saaf karte raho. Jitne zyada hearts pop karoge, aim line utni lambi hogi.</p>
+        <p class="how" style="margin-top:10px;">Kaise khelein: canvas pe <b>drag karke aim</b> karo, <b>chhodo to shoot</b>. Board bharne se pehle saaf karte raho. Jitne zyada hearts pop karoge, aim line utni lambi hogi.</p>
       </section>
     </main>
 
@@ -293,10 +291,10 @@
       ctx.setTransform(SC, 0, 0, SC, 0, 0);
 
       var COLORS = ["#e63950", "#ff7aa2", "#ffb703", "#12a594"];
-      var R = 27, COLS = 13, ROWS = 13, DY = R * 1.74;
+      var R = 22, COLS = 16, ROWS = 13, DY = R * 1.74;
       var DANGER_Y = H - 200, SH_Y = H - 72, SH_X = W / 2;
 
-      var grid, flying, particles, rings, floaters, tick, aimHintShown, aimAngle, cur, next, score, pops;
+      var grid, flying, particles, rings, floaters, tick, aimAngle, cur, next, score, pops;
       var toast = document.getElementById("popToast");
       var scoreEl = document.getElementById("popScore");
       var popsEl = document.getElementById("popPops");
@@ -325,7 +323,7 @@
             grid[r].push(r < 5 ? randOf(COLORS) : null);
           }
         }
-        flying = null; particles = []; rings = []; floaters = []; tick = 0; aimHintShown = false;
+        flying = null; particles = []; rings = []; floaters = []; tick = 0;
         aimAngle = -Math.PI / 2;
         score = 0; pops = 0;
         cur = randPresent(); next = randPresent();
@@ -611,9 +609,7 @@
       cv.addEventListener("pointerdown", function(e){ unlockAudio(); dragging = true; aimAt(pointerPos(e)); cv.setPointerCapture(e.pointerId); });
       document.addEventListener("pointerdown", unlockAudio, { once: true });
       cv.addEventListener("pointermove", function(e){ if(dragging) aimAt(pointerPos(e)); });
-      cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); } dragging = false; if(!aimHintShown){ aimHintShown = true; showToast(toast, "Aim set! Ab \u2764\uFE0F Shoot dabao"); } });
-      document.getElementById("popShoot").addEventListener("click", function(){ unlockAudio(); shoot(); });
-      document.addEventListener("keydown", function(e){ if(e.code === "Space"){ e.preventDefault(); unlockAudio(); shoot(); } });
+      cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); shoot(); } dragging = false; });
       cv.addEventListener("pointercancel", function(){ dragging = false; });
       document.getElementById("popRestart").addEventListener("click", function(){
         blip(520, 0.08, 0.08);
