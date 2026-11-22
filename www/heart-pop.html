@@ -151,17 +151,16 @@
   </head>
   <body>
     <main class="wrap">
-      <div style="margin-bottom:14px;"><a class="btn" href="index.html" style="text-decoration:none;">&#127968; Menu</a></div>
+      <div style="margin:10px 0 14px;"><a class="btn" href="index.html" style="text-decoration:none;">&#127968; Menu</a></div>
 <section class="card" id="card-pop">
         <div class="card-head">
           <div class="num">1</div>
           <div>
             <h2>Heart Pop</h2>
-            <p class="how">Neeche se heart shoot karo — jahan <b>3 ya zyada same colour</b> ke hearts jud jayein, wo pop!
-              Har pop pe ek sweet line aur halki si relaxing chime.</p>
+            <p class="how">Shoot hearts from below — match <b>3 of the same colour</b> to pop!</p>
           </div>
           <div class="badges">
-            <span class="badge">Hancy ki pick</span>
+            <span class="badge">Hancy's pick</span>
             <span class="badge genre">Bubble shooter</span>
           </div>
         </div>
@@ -178,7 +177,6 @@
           <span class="spacer"></span>
           <button class="btn ghost" id="popRestart" type="button">Restart</button>
         </div>
-        <p class="how" style="margin-top:10px;">Kaise khelein: canvas pe <b>drag karke aim</b> karo, <b>chhodo to shoot</b>. Board bharne se pehle saaf karte raho. Jitne zyada hearts pop karoge, aim line utni lambi hogi.</p>
       </section>
     </main>
 
@@ -192,7 +190,7 @@
       "From my heart, only you.",
       "You are my sweetest hello.",
       "My heart chose you.",
-      "Forever wali feeling."
+      "Forever and always."
     ];
     var lineIdx = 0;
     function nextLine(){ var s = LINES[lineIdx % LINES.length]; lineIdx++; return s; }
@@ -429,12 +427,12 @@
         if(!any){
           score += 100;
           for(var r2 = 0; r2 < 5; r2++) for(var c2 = 0; c2 < colsInRow(r2); c2++) grid[r2][c2] = randOf(COLORS);
-          showToast(toast, "Board saaf! Bonus +100", 2200);
+          showToast(toast, "Board cleared! Bonus +100", 2200);
           softChime(523);
         } else if(low){
           var keep = score;
           reset(); score = keep;
-          showToast(toast, "Board bhar gaya tha — naya board, score wahi!", 2400);
+          showToast(toast, "Board full — new board, same score!", 2400);
         }
         syncHud();
       }
@@ -499,7 +497,7 @@
         ctx.restore();
         ctx.fillStyle = "rgba(191,36,64,.55)";
         ctx.font = "700 19px Nunito, sans-serif"; ctx.textAlign = "left";
-        ctx.fillText("is line se neeche nahi", 14, DANGER_Y + 26);
+        ctx.fillText("Don't cross this line", 14, DANGER_Y + 26);
 
         /* grid hearts */
         for(var r = 0; r < ROWS; r++) for(var c = 0; c < colsInRow(r); c++){
@@ -613,7 +611,7 @@
       cv.addEventListener("pointercancel", function(){ dragging = false; });
       document.getElementById("popRestart").addEventListener("click", function(){
         blip(520, 0.08, 0.08);
-        reset(); showToast(toast, "Naya board — good luck!");
+        reset(); showToast(toast, "New board — good luck!");
       });
 
       reset();

@@ -121,11 +121,10 @@ button{min-height:44px}
     <div class="stat"><b id="uiDist">0m</b><span>Distance</span></div>
     <div class="stat"><b id="uiBest">0</b><span>Best</span></div>
     <div id="goalBar">
-      <div class="goal-top"><span class="goal-name">🏁 Goal 2100m — Win!</span><span id="goalText">0m done • 2100m left</span><span id="goalFrac">0 / 2100m</span></div>
+      <div class="goal-top"><span class="goal-name">🏁 Goal 2100m — Win!</span><span id="goalText" style="display:none">0m done • 2100m left</span><span id="goalFrac">0 / 2100m</span></div>
       <div class="goal-track"><div id="goalFill"></div><span id="goalRunner">🏃</span><span class="goal-flagmark">🏁</span></div>
     </div>
     <button class="iconbtn" id="btnPause" aria-label="Pause game">⏸️</button>
-    <a class="iconbtn" href="index.html" aria-label="Back to menu" style="text-decoration:none">🏠</a>
     <div id="powerChips">
       <span class="chip shield" id="chipShield">🛡️ Shield active</span>
       <span class="chip magnet" id="chipMagnet">🧲 Heart Magnet · <b>0s</b></span>
@@ -136,6 +135,7 @@ button{min-height:44px}
   </div>
 
   <div id="stage">
+    <a class="iconbtn" href="index.html" aria-label="Back to menu" style="text-decoration:none;position:absolute;left:12px;top:12px;z-index:6;background:rgba(18,9,7,.75)">🏠</a>
     <div id="gl"></div>
     <div id="vig"></div>
     <div id="countNum">3</div>
@@ -169,7 +169,7 @@ button{min-height:44px}
         <p class="tagline" id="overLine" style="margin-bottom:2px">You ran so far… but no one outruns love forever 😄</p>
         <div style="background:#fff;border:2.5px solid #2b1710;border-radius:12px;padding:10px 12px;margin:12px 0 2px;font-family:'Baloo 2';font-weight:800;font-size:16.5px;color:#431407">💬 Harsh: “Ok baby, anything for you, our soul is same.”</div>
         <button class="bigbtn alt" id="btnSorry">🙏 &nbsp;SAY SORRY TO ANCY</button>
-        <p class="smallnote" id="sorryNote" style="margin:8px 0 0">One chance only — Ancy will forgive you and let you run again 💕</p>
+        <p class="smallnote" id="sorryNote" style="display:none">One chance only — Ancy will forgive you and let you run again 💕</p>
         <div class="statsgrid">
           <div><b id="finalScore">0</b><span>Score</span></div>
           <div><b id="finalHearts">0</b><span>❤️ Hearts</span></div>
@@ -208,7 +208,6 @@ button{min-height:44px}
     <div class="overlay hidden" id="pauseScreen">
       <div class="sheet" style="text-align:center;max-width:420px">
         <h2>⏸️ Paused</h2>
-        <p class="tagline">Ancy stopped to catch her breath too… resume quick!</p>
         <button class="bigbtn" id="btnResume">▶ &nbsp;RESUME</button>
         <button class="bigbtn alt" id="btnQuit">Quit to Menu</button>
       </div>

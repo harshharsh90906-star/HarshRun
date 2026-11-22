@@ -151,14 +151,13 @@
   </head>
   <body>
     <main class="wrap">
-      <div style="margin-bottom:14px;"><a class="btn" href="index.html" style="text-decoration:none;">&#127968; Menu</a></div>
+      <div style="margin:10px 0 14px;"><a class="btn" href="index.html" style="text-decoration:none;">&#127968; Menu</a></div>
 <section class="card" id="card-stack">
         <div class="card-head">
           <div class="num gold">2</div>
           <div>
             <h2>Stack Hearts</h2>
-            <p class="how">Upar ek heart layer idhar-udhar slide hoti hai — sahi time pe <b>tap karo to girti hai</b>.
-              Jitna hissa neeche wali layer pe tikega, utni hi tower bachegi. Tower kitni unchi bana sakte ho?</p>
+            <p class="how">Tap at the right moment to drop the heart.</p>
           </div>
           <div class="badges">
             <span class="badge genre">Timing · Tower</span>
@@ -172,10 +171,9 @@
           <span class="stat">Tower <b id="stackScore">0</b></span>
           <span class="stat">Best <b id="stackBest">0</b></span>
           <span class="spacer"></span>
-          <button class="btn" id="stackDrop" type="button">Drop karo</button>
+          <button class="btn" id="stackDrop" type="button">Drop</button>
           <button class="btn ghost" id="stackRestart" type="button">Restart</button>
         </div>
-        <p class="how" style="margin-top:10px;">Kaise khelein: stage pe tap karo ya <b>Drop karo</b> dabao. Perfect landing pe layer puri bachti hai — 5 layer pe ek sweet line milegi.</p>
       </section>
     </main>
 
@@ -189,7 +187,7 @@
       "From my heart, only you.",
       "You are my sweetest hello.",
       "My heart chose you.",
-      "Forever wali feeling."
+      "Forever and always."
     ];
     var lineIdx = 0;
     function nextLine(){ var s = LINES[lineIdx % LINES.length]; lineIdx++; return s; }
@@ -326,7 +324,7 @@
           moving.el.style.transform = "translateY(430px) rotate(-14deg)";
           moving.el.style.opacity = "0";
           lowThud();
-          showToast(toast, "Tower gir gayi! Score: " + score, 2600);
+          showToast(toast, "Tower fell! Score: " + score, 2600);
           return;
         }
 
@@ -350,7 +348,7 @@
 
         if(w < 30){
           over = true;
-          showToast(toast, "Layer bahut patli ho gayi — tower complete! Score: " + score, 2800);
+          showToast(toast, "Tower complete! Score: " + score, 2800);
           softChime(587);
           return;
         }
@@ -360,7 +358,7 @@
       stage.addEventListener("pointerdown", function(e){ e.preventDefault(); drop(); });
       document.getElementById("stackDrop").addEventListener("click", drop);
       document.getElementById("stackRestart").addEventListener("click", function(){
-        reset(); showToast(toast, "Nayi tower — shuru karo!");
+        reset(); showToast(toast, "New tower — go!");
       });
 
       reset();
