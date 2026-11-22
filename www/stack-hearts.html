@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Stack Hearts — Harsh Games</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        --bg:#fff9fa; --ink:#2b1220; --muted:#7c5568; --card:#ffffff; --line:#f2d7df;
+        --rose:#e63950; --rose-dark:#bf2440; --gold:#ffb703; --teal:#12a594;
+        --chip:#fdeef2; --shadow:0 10px 30px rgba(191,36,64,.10);
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#150e15; --ink:#f8e9ef; --muted:#c79cae; --card:#221420; --line:#402335;
+          --chip:#331b2b; --shadow:0 10px 30px rgba(0,0,0,.45);
+        }
+      }
+      *{ box-sizing:border-box; }
+      html{ scroll-behavior:smooth; }
+      body{
+        margin:0; background:var(--bg); color:var(--ink);
+        font-family:"Nunito", system-ui, -apple-system, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      button{ min-height:44px; font-family:inherit; cursor:pointer; }
+      .wrap{ max-width:880px; margin:0 auto; padding:20px 16px 40px; }
+
+      /* ---------- header ---------- */
+      .tag{
+        display:inline-block; font-family:"Baloo 2",sans-serif; font-weight:700; font-size:13px;
+        letter-spacing:.08em; text-transform:uppercase; color:var(--rose-dark);
+        background:var(--chip); border:1px solid var(--line); padding:6px 12px; border-radius:999px; margin:0 0 12px;
+      }
+      @media (prefers-color-scheme: dark){ .tag{ color:#ff9db1; } }
+      h1{
+        font-family:"Baloo 2",sans-serif; font-weight:800; font-size:clamp(30px,6vw,44px);
+        line-height:1.08; margin:0 0 10px;
+      }
+      .lede{ font-size:17px; line-height:1.55; color:var(--muted); margin:0 0 14px; max-width:56ch; }
+      .lede strong{ color:var(--ink); }
+      .chips{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 6px; }
+      .chip{
+        font-size:13.5px; font-weight:700; padding:7px 12px; border-radius:999px;
+        border:1.5px dashed var(--line); color:var(--muted); background:var(--card);
+      }
+      .chip b{ color:var(--rose); font-weight:800; }
+
+      /* ---------- game cards ---------- */
+      .card{
+        background:var(--card); border:1.5px solid var(--line); border-radius:22px;
+        padding:18px; margin:20px 0; box-shadow:var(--shadow);
+      }
+      .card.selected{ border-color:var(--rose); box-shadow:0 0 0 3px rgba(230,57,80,.25), var(--shadow); }
+      .card-head{ display:flex; gap:14px; align-items:flex-start; margin-bottom:14px; }
+      .num{
+        flex:0 0 auto; width:46px; height:46px; border-radius:14px; display:grid; place-items:center;
+        font-family:"Baloo 2",sans-serif; font-weight:800; font-size:22px; color:#fff; background:var(--rose);
+      }
+      .num.gold{ background:#e8930c; }
+      .num.teal{ background:var(--teal); }
+      .card-head h2{
+        font-family:"Baloo 2",sans-serif; font-weight:800; font-size:26px; line-height:1.1; margin:2px 0 4px;
+      }
+      .how{ margin:0; color:var(--muted); font-size:15px; line-height:1.5; }
+      .badges{ margin-left:auto; flex:0 0 auto; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+      .badge{
+        font-size:12px; font-weight:800; padding:5px 10px; border-radius:999px; white-space:nowrap;
+        background:var(--chip); color:var(--rose-dark); border:1px solid var(--line);
+      }
+      @media (prefers-color-scheme: dark){ .badge{ color:#ff9db1; } }
+      .badge.genre{ background:transparent; color:var(--muted); }
+
+      .stage{
+        position:relative; border-radius:16px; overflow:hidden; margin:0 auto;
+        border:1.5px solid var(--line); user-select:none; -webkit-user-select:none;
+      }
+      .stage.narrow{ max-width:440px; }
+      canvas.game{ display:block; width:100%; height:auto; }
+      #popCanvas{ touch-action:none; }
+      #starCanvas{ touch-action:manipulation; }
+
+      .toast{
+        position:absolute; top:12px; left:50%; transform:translate(-50%,-8px);
+        background:rgba(24,8,16,.82); color:#fff; font-weight:800; font-size:14.5px;
+        padding:8px 16px; border-radius:999px; opacity:0; pointer-events:none;
+        transition:opacity .25s ease, transform .25s ease; white-space:nowrap; max-width:92%;
+        overflow:hidden; text-overflow:ellipsis; z-index:5;
+      }
+      .toast.show{ opacity:1; transform:translate(-50%,0); }
+
+      .hud{
+        display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin-top:14px;
+      }
+      .stat{ font-size:15px; font-weight:700; color:var(--muted); }
+      .stat b{ color:var(--ink); font-family:"Baloo 2",sans-serif; font-size:19px; }
+      .hud .spacer{ flex:1 1 auto; }
+      .btn{
+        border:none; border-radius:999px; padding:10px 20px;
+        font-family:"Baloo 2",sans-serif; font-weight:700; font-size:16px;
+        background:var(--rose); color:#fff;
+      }
+      .btn:active{ transform:scale(.97); }
+      .btn.ghost{ background:transparent; color:var(--rose); border:2px solid var(--rose); }
+      .btn.pick{ background:var(--ink); color:var(--bg); }
+      .card.selected .btn.pick{ background:var(--rose); color:#fff; }
+      .next-heart{ display:inline-flex; vertical-align:-6px; margin-left:4px; }
+      .next-heart svg{ width:24px; height:23px; }
+
+      /* ---------- stack stage ---------- */
+      #stackStage{
+        height:460px; max-width:560px; cursor:pointer; touch-action:manipulation;
+        background:linear-gradient(180deg,#ffe3ae 0%,#ffb38a 42%,#ff7e6b 78%,#e63950 135%);
+      }
+      #stackStage::before{
+        content:""; position:absolute; width:110px; height:110px; border-radius:50%;
+        background:rgba(255,244,200,.85); top:34px; right:36px;
+        box-shadow:0 0 60px 24px rgba(255,240,190,.45);
+      }
+      #stackWorld{ position:absolute; inset:0; will-change:transform; }
+      .layer{
+        position:absolute; height:36px; border-radius:11px;
+        border:2px solid rgba(255,255,255,.45);
+        display:flex; align-items:center; justify-content:center;
+        color:rgba(255,255,255,.92); font-size:17px; line-height:1;
+        box-shadow:0 3px 8px rgba(120,10,40,.25);
+      }
+      .layer.base{ background:#5b2333 !important; border-color:rgba(255,255,255,.25); }
+      .layer.falling{ transition:transform .65s ease-in, opacity .65s ease-in; z-index:3; }
+
+      /* ---------- pick section ---------- */
+      .pick-box{
+        border:2px dashed var(--rose); border-radius:22px; padding:20px; margin:26px 0 8px;
+        text-align:center; background:var(--chip);
+      }
+      .pick-box h2{ font-family:"Baloo 2",sans-serif; font-weight:800; font-size:24px; margin:0 0 6px; }
+      .pick-box p{ margin:0; color:var(--muted); font-size:15.5px; line-height:1.55; }
+      .pick-box p b{ color:var(--rose-dark); }
+      @media (prefers-color-scheme: dark){ .pick-box p b{ color:#ff9db1; } }
+      .foot{ text-align:center; color:var(--muted); font-size:13.5px; margin-top:18px; }
+      @media (prefers-reduced-motion: reduce){
+        html{ scroll-behavior:auto; }
+        .toast{ transition:none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div style="margin-bottom:14px;"><a class="btn" href="index.html" style="text-decoration:none;">&#127968; Menu</a></div>
+<section class="card" id="card-stack">
+        <div class="card-head">
+          <div class="num gold">2</div>
+          <div>
+            <h2>Stack Hearts</h2>
+            <p class="how">Upar ek heart layer idhar-udhar slide hoti hai — sahi time pe <b>tap karo to girti hai</b>.
+              Jitna hissa neeche wali layer pe tikega, utni hi tower bachegi. Tower kitni unchi bana sakte ho?</p>
+          </div>
+          <div class="badges">
+            <span class="badge genre">Timing · Tower</span>
+          </div>
+        </div>
+        <div class="stage" id="stackStage" aria-label="Stack Hearts game board">
+          <div id="stackWorld"></div>
+          <div class="toast" id="stackToast"></div>
+        </div>
+        <div class="hud">
+          <span class="stat">Tower <b id="stackScore">0</b></span>
+          <span class="stat">Best <b id="stackBest">0</b></span>
+          <span class="spacer"></span>
+          <button class="btn" id="stackDrop" type="button">Drop karo</button>
+          <button class="btn ghost" id="stackRestart" type="button">Restart</button>
+        </div>
+        <p class="how" style="margin-top:10px;">Kaise khelein: stage pe tap karo ya <b>Drop karo</b> dabao. Perfect landing pe layer puri bachti hai — 5 layer pe ek sweet line milegi.</p>
+      </section>
+    </main>
+
+    <script>
+/* ================= shared helpers ================= */
+    var LINES = [
+      "Every heart, only for you.",
+      "Harsh loves Ancy.",
+      "You make my heart smile.",
+      "My favourite place is with you.",
+      "From my heart, only you.",
+      "You are my sweetest hello.",
+      "My heart chose you.",
+      "Forever wali feeling."
+    ];
+    var lineIdx = 0;
+    function nextLine(){ var s = LINES[lineIdx % LINES.length]; lineIdx++; return s; }
+
+    function showToast(el, text, hold){
+      el.textContent = text;
+      el.classList.add("show");
+      clearTimeout(el._t);
+      el._t = setTimeout(function(){ el.classList.remove("show"); }, hold || 1900);
+    }
+
+    var actx = null;
+    function ac(){
+      if(!actx){
+        try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ actx = null; }
+      }
+      if(actx && actx.state === "suspended"){ actx.resume(); }
+      return actx;
+    }
+    function tone(freq, delay, dur, vol){
+      var a = ac(); if(!a) return;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sine"; o.frequency.value = freq;
+      var s = a.currentTime + (delay || 0);
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(vol || 0.1, s + 0.09);
+      g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(s); o.stop(s + dur + 0.05);
+    }
+    /* soft relaxing chime — slow attack, long fade, no coin-like ding */
+    function softChime(base){
+      tone(base, 0, 0.9, 0.10);
+      tone(base * 1.5, 0.07, 1.0, 0.07);
+      tone(base * 2, 0.14, 1.1, 0.045);
+    }
+    function lowThud(){ tone(160, 0, 0.35, 0.07); }
+
+    function heartPath(ctx, x, y, s){
+      ctx.beginPath();
+      ctx.moveTo(x, y + s * 0.82);
+      ctx.bezierCurveTo(x - s * 1.25, y + s * 0.05, x - s * 0.78, y - s * 0.95, x, y - s * 0.28);
+      ctx.bezierCurveTo(x + s * 0.78, y - s * 0.95, x + s * 1.25, y + s * 0.05, x, y + s * 0.82);
+      ctx.closePath();
+    }
+/* ================= GAME 2 : STACK HEARTS ================= */
+    (function(){
+      var stage = document.getElementById("stackStage");
+      var world = document.getElementById("stackWorld");
+      var toast = document.getElementById("stackToast");
+      var scoreEl = document.getElementById("stackScore");
+      var bestEl = document.getElementById("stackBest");
+      var PALETTE = ["#e63950", "#ff7aa2", "#ff9f1c", "#12a594", "#e63950", "#ff5d73"];
+      var LH = 38;
+
+      var layers, moving, rafId, lastT, over, score, best = 0, colorI;
+
+      function stageW(){ return stage.clientWidth; }
+
+      function makeLayer(left, width, idx, isBase){
+        var d = document.createElement("div");
+        d.className = "layer" + (isBase ? " base" : "");
+        d.style.left = left + "px";
+        d.style.width = width + "px";
+        d.style.bottom = (idx * LH) + "px";
+        d.style.background = PALETTE[idx % PALETTE.length];
+        d.textContent = "♥";
+        world.appendChild(d);
+        return d;
+      }
+
+      function camera(){
+        var top = (layers.length + 1) * LH;
+        var extra = Math.max(0, top - 300);
+        world.style.transform = "translateY(" + extra + "px)";
+      }
+
+      function spawn(){
+        var prev = layers[layers.length - 1];
+        var d = makeLayer(0, prev.width, layers.length, false);
+        moving = { el: d, left: 0, width: prev.width, dir: 1, speed: 150 + score * 7 };
+        camera();
+      }
+
+      function reset(){
+        cancelAnimationFrame(rafId);
+        world.innerHTML = "";
+        layers = []; score = 0; over = false; colorI = 0;
+        var w = Math.min(220, stageW() * 0.55);
+        var base = { left: (stageW() - w) / 2, width: w };
+        makeLayer(base.left, base.width, 0, true);
+        layers.push(base);
+        scoreEl.textContent = "0";
+        spawn();
+        lastT = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
+
+      function tick(t){
+        if(over) return;
+        var dt = Math.min((t - lastT) / 1000, 0.05); lastT = t;
+        moving.left += moving.dir * moving.speed * dt;
+        var maxL = stageW() - moving.width;
+        if(moving.left <= 0){ moving.left = 0; moving.dir = 1; }
+        if(moving.left >= maxL){ moving.left = maxL; moving.dir = -1; }
+        moving.el.style.left = moving.left + "px";
+        rafId = requestAnimationFrame(tick);
+      }
+
+      function fallPiece(left, width, idx, color){
+        var d = makeLayer(left, width, idx, false);
+        d.style.background = color;
+        d.classList.add("falling");
+        requestAnimationFrame(function(){
+          d.style.transform = "translateY(430px) rotate(16deg)";
+          d.style.opacity = "0";
+        });
+        setTimeout(function(){ d.remove(); }, 750);
+      }
+
+      function drop(){
+        if(over || !moving) return;
+        ac();
+        var prev = layers[layers.length - 1];
+        var L = Math.max(prev.left, moving.left);
+        var Rr = Math.min(prev.left + prev.width, moving.left + moving.width);
+        var w = Rr - L;
+        var idx = layers.length;
+        var color = PALETTE[idx % PALETTE.length];
+
+        if(w <= 10){
+          over = true;
+          moving.el.classList.add("falling");
+          moving.el.style.transform = "translateY(430px) rotate(-14deg)";
+          moving.el.style.opacity = "0";
+          lowThud();
+          showToast(toast, "Tower gir gayi! Score: " + score, 2600);
+          return;
+        }
+
+        /* trimmed-off piece falls */
+        if(moving.left < L) fallPiece(moving.left, L - moving.left, idx, color);
+        if(moving.left + moving.width > Rr) fallPiece(Rr, (moving.left + moving.width) - Rr, idx, color);
+
+        var perfect = Math.abs(moving.left - prev.left) < 5;
+        if(perfect){ L = prev.left; w = prev.width; }
+
+        moving.el.style.left = L + "px";
+        moving.el.style.width = w + "px";
+        layers.push({ left: L, width: w });
+        score++;
+        scoreEl.textContent = score;
+        if(score > best){ best = score; bestEl.textContent = best; }
+
+        if(perfect){ showToast(toast, "Perfect landing!"); softChime(520); }
+        else tone(330 + score * 12, 0, 0.5, 0.06);
+        if(score % 5 === 0 && !perfect){ showToast(toast, nextLine()); softChime(440); }
+
+        if(w < 30){
+          over = true;
+          showToast(toast, "Layer bahut patli ho gayi — tower complete! Score: " + score, 2800);
+          softChime(587);
+          return;
+        }
+        spawn();
+      }
+
+      stage.addEventListener("pointerdown", function(e){ e.preventDefault(); drop(); });
+      document.getElementById("stackDrop").addEventListener("click", drop);
+      document.getElementById("stackRestart").addEventListener("click", function(){
+        reset(); showToast(toast, "Nayi tower — shuru karo!");
+      });
+
+      reset();
+    })();
+    </script>
+  </body>
+</html>
