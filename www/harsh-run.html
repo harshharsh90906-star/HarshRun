@@ -25,8 +25,8 @@ body{margin:0;font-family:"Nunito",system-ui,sans-serif;background:#0f0a08;color
 button{min-height:44px}
 #app{height:100dvh;display:flex;flex-direction:column;max-width:1100px;margin:0 auto;position:relative;background:var(--bg)}
 /* HUD */
-#hud{display:flex;align-items:center;gap:6px;padding:8px 10px;background:rgba(18,9,7,.94);border-bottom:1px solid #ffffff1a;z-index:5;flex-wrap:wrap}
-.stat{background:#ffffff0d;border:1px solid #ffffff17;border-radius:10px;padding:5px 10px;line-height:1.05;min-width:62px;text-align:center}
+#hud{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top, 0px) + 8px) 10px 8px;background:rgba(18,9,7,.94);border-bottom:1px solid #ffffff1a;z-index:5;flex-wrap:wrap}
+.stat{background:#ffffff0d;border:1px solid #ffffff17;border-radius:10px;padding:5px 4px;line-height:1.05;flex:1 1 0;min-width:0;text-align:center}
 .stat b{font-family:"Baloo 2",cursive;font-size:18px;display:block}
 .stat span{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .stat.hearts b{color:#ff7a93}.stat.score b{color:var(--gold)}
@@ -116,9 +116,10 @@ button{min-height:44px}
   .duo{grid-template-columns:1fr}.sheet{padding:15px}.sheet.start{padding:20px 15px 16px}
   .start-photo{height:150px}
   .statsgrid{grid-template-columns:repeat(2,1fr)}
-  .stat{min-width:62px;padding:5px 8px}.stat b{font-size:17px}
+  .stat{min-width:0;padding:5px 3px}.stat b{font-size:16px}.stat span{font-size:8.5px;letter-spacing:.06em}
   #ancyMeter{order:5;flex-basis:100%}
 }
+@media(max-width:380px){.stat b{font-size:14px}.stat span{font-size:8px}}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 <style>.bigbtn{box-shadow:0 0 0 0 rgba(255,77,109,.55);animation:glowp 2.2s infinite}@keyframes glowp{70%{box-shadow:0 0 0 14px rgba(255,77,109,0)}100%{box-shadow:0 0 0 0 rgba(255,77,109,0)}}</style>
@@ -142,7 +143,7 @@ button{min-height:44px}
   </div>
 
   <div id="stage">
-    <a class="back-btn" href="index.html" style="position:fixed;left:12px;top:calc(env(safe-area-inset-top, 0px) + 76px);z-index:200;text-decoration:none;">☰ Menu</a>
+    <a class="back-btn" href="index.html" style="position:fixed;left:12px;top:calc(env(safe-area-inset-top, 0px) + 100px);z-index:200;text-decoration:none;">☰ Menu</a>
     <div id="gl"></div>
     <div id="vig"></div>
     <div id="countNum">3</div>
@@ -282,7 +283,7 @@ function disposeObj(obj){
   });
 }
 function reset(){ S.lane=0;S.targetLane=0;S.x=0;S.jumpY=0;S.jumpV=0;S.sliding=0;S.speed=15;S.dist=0;S.score=0;S.hearts=0;S.combo=0;S.bestCombo=0;S.ancyGap=.82;S.invuln=0;S.shake=0;S.shield=false;S.magnet=0;S.double=0;S.boost=0;S.spawnT=1.4;S.heartT=.9;S.powerT=11;S.time=0;S.milestones={};
-  S.strikes=0;S.ancyState='chase';S.ancyT=0;S.catchT=0;S.grabbed=false;S.slowT=0;S.countT=0;S.lastCount=9;S.sorryT=0;S.sorryPhase=0;
+  S.strikes=0;S.ancyState='chase';S.ancyT=0;S.catchT=0;S.grabbed=false;S.slowT=0;S.countT=0;S.lastCount=9;S.sorryT=0;S.sorryPhase=0;S.hugT0=0;
   const sp=document.getElementById('sorryPrompt'); if(sp)sp.classList.add('hidden');
   const cn=document.getElementById('countNum'); if(cn)cn.style.display='none'; hideAncySay();
   for(const e of entities){ scene.remove(e.obj); disposeObj(e.obj); } entities=[];
@@ -5382,6 +5383,21 @@ function makeBubble(){
   return {sp:sp,c:c,tex:tex,timer:0};
 }
 const bubbleA=makeBubble(), bubbleH=makeBubble();
+/* keep a speech bubble fully on-screen: project its centre, clamp so the whole
+   bubble fits, unproject back at the same depth (1 frame stale camera is fine) */
+const _bv=new THREE.Vector3();
+function clampBubble(b){
+  if(!b.sp.visible) return;
+  _bv.copy(b.sp.position).project(camera);
+  const d=b.sp.position.distanceTo(camera.position);
+  const th=Math.tan((camera.fov*Math.PI/180)/2);
+  const hx=(b.sp.scale.x/2)/(d*th*camera.aspect), hy=(b.sp.scale.y/2)/(d*th);
+  if(hx>=1||hy>=1) return;
+  _bv.x=Math.max(-1+hx,Math.min(1-hx,_bv.x));
+  _bv.y=Math.max(-1+hy,Math.min(1-hy,_bv.y));
+  _bv.unproject(camera);
+  b.sp.position.copy(_bv);
+}
 function drawBubble(b,text,accent){
   const g=b.c.getContext('2d'), W=b.c.width, H=b.c.height;
   g.clearRect(0,0,W,H);
@@ -5808,7 +5824,7 @@ function render(dt){
     if(S.sorryPhase===1&&!window.dialogueBusy()&&_sT>=2.0){ S.sorryPhase=2; sfx.giggle();
       sayLine(pickLine(FORGIVE_LINES,'forgive'),3000,'high');
       burst(S.x*2.3+0.3,2.2,0,0,10); }
-    if(S.sorryPhase===2&&!window.dialogueBusy()&&_sT>=3.5){ S.sorryPhase=3;
+    if(S.sorryPhase===2&&!window.dialogueBusy()&&_sT>=3.5){ S.sorryPhase=3; S.hugT0=_sT;
       floater(new THREE.Vector3(S.x*2.3,2.7,0),'🤗 HUG!','#ff7a93');
       toast('🤗 Harsh & Ancy hug!',2200);
       burst(S.x*2.3,1.7,0,0,16); burst(S.x*2.3,1.2,0,2,10);
@@ -5842,19 +5858,23 @@ function render(dt){
   ancy.root.visible=true;
   const chaseAz=1.55+S.ancyGap*1.7, chaseScale=0.6+(1-S.ancyGap)*0.42;
   let az=chaseAz, ascale=chaseScale, ax=ancyX-0.85*S.ancyGap;
-  if(S.mode==='catch'||S.mode==='caught'||over){ const k=over?1:Math.min(1,S.catchT/0.6); az=1.5+(0.78-1.5)*k; ax=(ancyX-0.5)+(px+0.62-(ancyX-0.5))*k; ascale=0.88+0.12*k; }
-  else if(S.mode==='sorry'){ az=0.78; ax=px+0.62; ascale=1.0; }
+  if(S.mode==='catch'||S.mode==='caught'||over){ const k=over?1:Math.min(1,S.catchT/0.6); az=1.5+(0.15-1.5)*k; ax=(ancyX-0.5)+(px+0.45-(ancyX-0.5))*k; ascale=0.88+0.12*k; }
+  else if(S.mode==='sorry'){ az=0.15; ax=px+0.45; ascale=1.0; }
   else if(S.ancyState==='surge'||S.ancyState==='tripping'){ az=1.5; ascale=1.0; ax=px*0.96; }
   else if(S.ancyState==='gone'){ ancy.root.visible=false; }
   else if(S.ancyState==='returning'){ const t=1-Math.max(0,S.ancyT)/1.6; az=7.5+(chaseAz-7.5)*t; ascale=0.3+(chaseScale-0.3)*t; }
+  { const _ct=(8.4-az)/14.4, _ccx=px*0.55+(px*0.3-px*0.55)*_ct, _hw=Math.tan(camera.fov*0.5*Math.PI/180)*Math.max(1,8.4-az)*camera.aspect*0.95;
+    if(_hw>0.7) ax=Math.max(_ccx-_hw+0.75,Math.min(_ccx+_hw-0.75,ax)); }
   ancy.root.position.set(ax,0,az); ancy.root.scale.setScalar(ascale);
   // speech bubbles hover over whoever is talking
-  if(bubbleA.timer>0){ bubbleA.timer-=dt; if(bubbleA.timer<=0||!ancy.root.visible) bubbleA.sp.visible=false; }
+  if(bubbleA.timer>0){ bubbleA.timer-=dt; if(bubbleA.timer<=0||!ancy.root.visible||S.ancyState==='returning') bubbleA.sp.visible=false; }
   const bs=Math.max(0.72,ascale);
   bubbleA.sp.scale.set(3.3*bs,1.12*bs,1);
   bubbleA.sp.position.set(ax,2.62*ascale+0.62,az);
+  clampBubble(bubbleA);
   if(bubbleH.timer>0){ bubbleH.timer-=dt; if(bubbleH.timer<=0) bubbleH.sp.visible=false; }
   bubbleH.sp.position.set(px,S.jumpY+2.95,0.2);
+  clampBubble(bubbleH);
   animateRunner(ancy,S.runPhase*1.06,0,false);
   ancy.inner.rotation.z=(S.targetLane-S.x)*0.15;
   if(ancy.skirt) ancy.skirt.rotation.y=Math.sin(S.runPhase*0.5)*0.14;
@@ -5865,22 +5885,26 @@ function render(dt){
   if(S.mode==='catch'||S.mode==='caught'||over){ ancy.armL.pivot.rotation.x=1.45; ancy.armR.pivot.rotation.x=1.45; ancy.armL.pivot.rotation.z=0.25; ancy.armR.pivot.rotation.z=-0.25; ancy.armL.mid.rotation.x=0.5; ancy.armR.mid.rotation.x=0.5; ancy.upper.rotation.set(0,0,0); ancy.inner.rotation.y=-0.4; ancy.inner.position.y=Math.abs(Math.sin(S.time*7+1))*0.05; }
   if(S.mode==='sorry'){ const _turn=Math.min(1,S.sorryT/0.6); ancy.armL.pivot.rotation.x=0.15; ancy.armR.pivot.rotation.x=0.15; ancy.armL.pivot.rotation.z=0.12; ancy.armR.pivot.rotation.z=-0.12; ancy.armL.mid.rotation.x=0.15; ancy.armR.mid.rotation.x=0.15; ancy.upper.rotation.set(0,0,0); ancy.inner.rotation.y=1.5*_turn; ancy.inner.position.y=0; ancy.legL.pivot.rotation.x=0.05; ancy.legR.pivot.rotation.x=-0.05; ancy.legL.mid.rotation.x=0.05; ancy.legR.mid.rotation.x=0.05; }
   if(S.mode==='sorry'&&S.sorryPhase>=3){ /* HUG — both reach out and hold each other */
-    harsh.armL.pivot.rotation.set(1.25,0,0.35); harsh.armR.pivot.rotation.set(1.25,0,-0.35);
-    harsh.armL.mid.rotation.x=0.7; harsh.armR.mid.rotation.x=0.7;
-    ancy.armL.pivot.rotation.set(1.25,0,0.35); ancy.armR.pivot.rotation.set(1.25,0,-0.35);
-    ancy.armL.mid.rotation.x=0.7; ancy.armR.mid.rotation.x=0.7;
-    harsh.inner.rotation.x=-0.1; ancy.inner.rotation.x=-0.1; }
+    harsh.armL.pivot.rotation.set(1.3,0,0.8); harsh.armR.pivot.rotation.set(1.7,0,0);
+    harsh.armL.mid.rotation.x=-1.5; harsh.armR.mid.rotation.x=-2.3;
+    ancy.armL.pivot.rotation.set(1.7,0,0); ancy.armR.pivot.rotation.set(1.3,0,-0.2);
+    ancy.armL.mid.rotation.x=-2.3; ancy.armR.mid.rotation.x=-1.5;
+    const _hk=Math.min(1,(S.sorryT-(S.hugT0||S.sorryT))/0.8);
+    const _bw=Math.max(0,Math.min(1,(S.sorryT-0.5)/0.6))*(S.sorryT>4.6?Math.max(0,1-(S.sorryT-4.6)/0.8):1);
+    harsh.inner.rotation.x=-0.45*_bw*(1-_hk)-0.02*_hk; ancy.inner.rotation.x=-0.02*_hk; }
   fxPost(dt,px);
   // camera
-  let cx=0, cy=5.3+S.jumpY*0.22, cz=8.4;
-  if(S.mode==='catch'||S.mode==='caught'||over||S.mode==='sorry'){ cy=4.4; cz=6.9; cx=px*0.6; }
+  let cx=px*0.55, cy=5.3+S.jumpY*0.22, cz=8.4;
+  if(S.mode==='catch'||S.mode==='caught'||over||S.mode==='sorry'){ cy=4.4; cz=6.9; cx=((px+ax)/2)*0.6; }
   if(S.shake>0){ cx+=(Math.random()-0.5)*0.35*S.shake; cy+=(Math.random()-0.5)*0.25*S.shake; }
   camera.position.x+=(cx-camera.position.x)*Math.min(1,dt*7);
   camera.position.y+=(cy-camera.position.y)*Math.min(1,dt*7);
   camera.position.z=cz;
-  if(S.mode==='catch'||S.mode==='caught'||S.mode==='over'||S.mode==='sorry') camera.lookAt(px*0.55,1.15,-6); else camera.lookAt(0,1.15,-6);
+  if(S.mode==='catch'||S.mode==='caught'||S.mode==='over'||S.mode==='sorry') camera.lookAt(((px+ax)/2)*0.55,1.15,-6); else camera.lookAt(px*0.3,0.8,-6);
   const bf=hudEl('boostFx'), bo=S.boost>0?'1':'0'; if(bf._o!==bo){ bf._o=bo; bf.style.opacity=bo; }
   { const tf=(S.mode==='run')?62+Math.min(9,Math.max(0,S.speed-15)*0.45)+(S.boost>0?5:0):62; if(Math.abs(camera.fov-tf)>0.05){ camera.fov+=(tf-camera.fov)*Math.min(1,dt*3); camera.updateProjectionMatrix(); } }
+  camera.updateMatrixWorld(); /* fresh matrix so the clamp uses this frame's camera, not last frame's */
+  clampBubble(bubbleA); clampBubble(bubbleH); /* re-clamp: a line can start after the positioning block */
   renderer.render(scene,camera);
 }
 const _hudCache={};
