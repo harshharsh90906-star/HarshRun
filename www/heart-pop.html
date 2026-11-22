@@ -611,7 +611,7 @@
       cv.addEventListener("pointerdown", function(e){ unlockAudio(); dragging = true; aimAt(pointerPos(e)); cv.setPointerCapture(e.pointerId); });
       document.addEventListener("pointerdown", unlockAudio, { once: true });
       cv.addEventListener("pointermove", function(e){ if(dragging) aimAt(pointerPos(e)); });
-      cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); } dragging = false; if(!aimHintShown){ aimHintShown = true; showToast("Aim set! Ab \u2764\uFE0F Shoot dabao"); } });
+      cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); } dragging = false; if(!aimHintShown){ aimHintShown = true; showToast(toast, "Aim set! Ab \u2764\uFE0F Shoot dabao"); } });
       document.getElementById("popShoot").addEventListener("click", function(){ unlockAudio(); shoot(); });
       document.addEventListener("keydown", function(e){ if(e.code === "Space"){ e.preventDefault(); unlockAudio(); shoot(); } });
       cv.addEventListener("pointercancel", function(){ dragging = false; });
