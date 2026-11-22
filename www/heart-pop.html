@@ -262,24 +262,24 @@
       return "rgb(" + r + "," + g + "," + b + ")";
     }
     /* realistic heart: soft shadow, glossy gradient, bright highlight */
-    function drawHeart(x, y, s, color){
-      ctx.save();
-      ctx.fillStyle = "rgba(60,10,30,.18)";
-      heartPath(ctx, x + 2, y + 4, s); ctx.fill();
-      var g = ctx.createRadialGradient(x - s * 0.4, y - s * 0.45, s * 0.1, x, y, s * 1.25);
+    function drawHeart(c, x, y, s, color){
+      c.save();
+      c.fillStyle = "rgba(60,10,30,.18)";
+      heartPath(c, x + 2, y + 4, s); c.fill();
+      var g = c.createRadialGradient(x - s * 0.4, y - s * 0.45, s * 0.1, x, y, s * 1.25);
       g.addColorStop(0, shade(color, 0.45));
       g.addColorStop(0.55, color);
       g.addColorStop(1, shade(color, -0.3));
-      ctx.fillStyle = g;
-      heartPath(ctx, x, y, s); ctx.fill();
-      ctx.strokeStyle = shade(color, -0.4); ctx.globalAlpha = 0.25; ctx.lineWidth = 1.5;
-      heartPath(ctx, x, y, s); ctx.stroke();
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = "rgba(255,255,255,.5)";
-      ctx.beginPath(); ctx.ellipse(x - s * 0.38, y - s * 0.38, s * 0.22, s * 0.12, -0.6, 0, 7); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,.75)";
-      ctx.beginPath(); ctx.arc(x - s * 0.3, y - s * 0.32, s * 0.09, 0, 7); ctx.fill();
-      ctx.restore();
+      c.fillStyle = g;
+      heartPath(c, x, y, s); c.fill();
+      c.strokeStyle = shade(color, -0.4); c.globalAlpha = 0.25; c.lineWidth = 1.5;
+      heartPath(c, x, y, s); c.stroke();
+      c.globalAlpha = 1;
+      c.fillStyle = "rgba(255,255,255,.5)";
+      c.beginPath(); c.ellipse(x - s * 0.38, y - s * 0.38, s * 0.22, s * 0.12, -0.6, 0, 7); c.fill();
+      c.fillStyle = "rgba(255,255,255,.75)";
+      c.beginPath(); c.arc(x - s * 0.3, y - s * 0.32, s * 0.09, 0, 7); c.fill();
+      c.restore();
     }
 /* ================= GAME 1 : HEART POP ================= */
     (function(){
@@ -482,7 +482,7 @@
         /* grid hearts */
         for(var r = 0; r < ROWS; r++) for(var c = 0; c < colsInRow(r); c++){
           var v = grid[r][c]; if(v === null) continue;
-          drawHeart(cellX(r,c), cellY(r), R * 0.92, v);
+          drawHeart(ctx, cellX(r,c), cellY(r), R * 0.92, v);
         }
 
         /* aim guide — long, with one wall bounce, like a real bubble shooter */
@@ -515,10 +515,10 @@
         ctx.fillStyle = "#2b1220";
         ctx.beginPath(); ctx.arc(SH_X, SH_Y + 34, 40, Math.PI, 0); ctx.fill();
         if(!flying){
-          drawHeart(SH_X, SH_Y, R * 0.95, cur);
+          drawHeart(ctx, SH_X, SH_Y, R * 0.95, cur);
         }
         if(flying){
-          drawHeart(flying.x, flying.y, R * 0.95, flying.color);
+          drawHeart(ctx, flying.x, flying.y, R * 0.95, flying.color);
         }
 
         /* particles */
