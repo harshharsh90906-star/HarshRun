@@ -245,6 +245,8 @@
       o.start(s); o.stop(s + dur + 0.05);
     }
     function blip(freq, dur, vol){ tone(freq, 0, dur, vol); }
+    /* iOS unlock: first touch opens the audio session so later sounds play instantly, not seconds late */
+    function unlockAudio(){ ac(); tone(440, 0, 0.05, 0.0001); }
 
     function heartPath(ctx, x, y, s){
       ctx.beginPath();
@@ -499,30 +501,37 @@
           drawHeart(ctx, cellX(r,c), cellY(r), R * 0.92, v);
         }
 
-        /* aim guide — long, with one wall bounce, like a real bubble shooter */
+        /* aim guide — full trajectory to the landing heart/top, grows with pops */
         if(!flying){
+          var maxLen = Math.min(500 + pops * 25, 1600);
+          var ax = SH_X, ay = SH_Y, dx = Math.cos(aimAngle), dy = Math.sin(aimAngle);
+          var pts = [[ax, ay]], len = 0, landed = null, stepLen = 6;
+          while(len < maxLen){
+            var nx = ax + dx * stepLen, ny = ay + dy * stepLen;
+            if(nx < R){ nx = R; dx = Math.abs(dx); }
+            if(nx > W - R){ nx = W - R; dx = -Math.abs(dx); }
+            ax = nx; ay = ny; len += stepLen;
+            pts.push([ax, ay]);
+            if(ay <= R + 10){ landed = [ax, ay]; break; }
+            var hit = false;
+            for(var hr = 0; hr < ROWS && !hit; hr++) for(var hc = 0; hc < colsInRow(hr); hc++){
+              if(grid[hr][hc] === null) continue;
+              var ddx = cellX(hr, hc) - ax, ddy = cellY(hr) - ay;
+              if(ddx * ddx + ddy * ddy < (2 * R - 2) * (2 * R - 2)){ landed = [cellX(hr, hc), cellY(hr)]; hit = true; break; }
+            }
+            if(hit) break;
+          }
           ctx.save();
           ctx.strokeStyle = "rgba(43,18,32,.5)"; ctx.lineWidth = 4; ctx.setLineDash([2, 14]);
           ctx.lineCap = "round";
-          var ax = SH_X, ay = SH_Y, dx = Math.cos(aimAngle), dy = Math.sin(aimAngle);
-          var remain = Math.min(400 + pops * 18, 820), guard = 0;
-          ctx.beginPath(); ctx.moveTo(ax, ay);
-          while(remain > 0 && guard < 4){
-            guard++;
-            var toWall = (dx > 0) ? (W - R - ax) / dx : (dx < 0) ? (R - ax) / dx : 1e9;
-            if(toWall <= 0){ dx = -dx; continue; }
-            var stepLen = Math.min(remain, toWall);
-            ax += dx * stepLen; ay += dy * stepLen;
-            ctx.lineTo(ax, ay);
-            remain -= stepLen;
-            if(stepLen === toWall) dx = -dx;
-            if(ay <= R + 10) break;
-          }
+          ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+          for(var pi = 1; pi < pts.length; pi++) ctx.lineTo(pts[pi][0], pts[pi][1]);
           ctx.stroke(); ctx.restore();
-          ctx.save();
-          ctx.fillStyle = "rgba(43,18,32,.55)";
-          ctx.beginPath(); ctx.arc(ax, ay, 7, 0, 7); ctx.fill();
-          ctx.restore();
+          if(landed){
+            ctx.save(); ctx.globalAlpha = 0.45;
+            drawHeart(ctx, landed[0], landed[1], R * 0.7, cur);
+            ctx.restore();
+          }
         }
 
         /* shooter — real launcher: metallic ring, dark chamber, aim arrow */
@@ -577,7 +586,8 @@
         aimAngle = Math.max(min, Math.min(max, a));
       }
       var dragging = false;
-      cv.addEventListener("pointerdown", function(e){ dragging = true; aimAt(pointerPos(e)); cv.setPointerCapture(e.pointerId); });
+      cv.addEventListener("pointerdown", function(e){ unlockAudio(); dragging = true; aimAt(pointerPos(e)); cv.setPointerCapture(e.pointerId); });
+      document.addEventListener("pointerdown", unlockAudio, { once: true });
       cv.addEventListener("pointermove", function(e){ if(dragging) aimAt(pointerPos(e)); });
       cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); shoot(); } dragging = false; });
       cv.addEventListener("pointercancel", function(){ dragging = false; });
