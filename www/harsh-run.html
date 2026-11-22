@@ -124,9 +124,7 @@ button{min-height:44px}
       <div class="goal-top"><span class="goal-name">🏁 Goal 2100m — Win!</span><span id="goalText">0m done • 2100m left</span><span id="goalFrac">0 / 2100m</span></div>
       <div class="goal-track"><div id="goalFill"></div><span id="goalRunner">🏃</span><span class="goal-flagmark">🏁</span></div>
     </div>
-    <button class="iconbtn" id="btnSound" aria-label="Sound on or off">🔊</button>
     <button class="iconbtn" id="btnPause" aria-label="Pause game">⏸️</button>
-    <a class="iconbtn" href="index.html" aria-label="Back to menu" style="text-decoration:none">🏠</a>
     <div id="powerChips">
       <span class="chip shield" id="chipShield">🛡️ Shield active</span>
       <span class="chip magnet" id="chipMagnet">🧲 Heart Magnet · <b>0s</b></span>
@@ -5996,7 +5994,6 @@ document.getElementById('btnWinMenu').onclick=toMenu;
 document.getElementById('btnResume').onclick=resumeGame;
 document.getElementById('btnQuit').onclick=toMenu;
 document.getElementById('btnPause').onclick=()=>{ if(S.mode==='run')pauseGame(); else if(S.mode==='pause')resumeGame(); };
-document.getElementById('btnSound').onclick=(e)=>{ soundOn=!soundOn; e.currentTarget.textContent=soundOn?'🔊':'🔇'; if(soundOn)sfx.click(); else stopVoice(); };
 function setDiff(d){ S.diff=d;
   const _me=document.getElementById('modeEasy'), _mh=document.getElementById('modeHard');
   if(_me){ _me.style.background=d==='easy'?'#3ecf6e':'#fff'; _me.style.color=d==='easy'?'#fff':'#5b3423'; }
