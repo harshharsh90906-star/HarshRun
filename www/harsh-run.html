@@ -5108,7 +5108,16 @@ three/build/three.module.js:
 "use strict";
 /* ================= THREE.JS SCENE ================= */
 const stageEl=document.getElementById('stage'), glEl=document.getElementById('gl');
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+let renderer=null, glFail=null;
+try{ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'}); }
+catch(e1){ glFail=e1;
+  try{ renderer=new THREE.WebGLRenderer({antialias:true}); }
+  catch(e2){ glFail=e2;
+    try{ renderer=new THREE.WebGLRenderer({antialias:false}); }
+    catch(e3){ glFail=e3; }
+  }
+}
+if(!renderer){ var _m=document.createElement('div'); _m.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#1a0e12;color:#fff;font-family:sans-serif;font-size:18px;text-align:center;padding:24px;z-index:9999'; _m.textContent='This device could not start 3D graphics (WebGL). Please try a real phone, or in the emulator turn on GPU acceleration.'; document.body.appendChild(_m); throw new Error('WebGL unavailable: '+glFail); }
 const maxPR=Math.min(window.devicePixelRatio||1,2.25); const minPR=Math.min(maxPR,1.5); let curPR=minPR;
 renderer.setPixelRatio(curPR);
 renderer.shadowMap.enabled=true;
