@@ -230,6 +230,21 @@
       tone(base * 2, 0.14, 1.1, 0.045);
     }
     function lowThud(){ tone(160, 0, 0.35, 0.07); }
+    /* whoosh up when shooting, tiny tick on wall bounce */
+    function sweep(f1, f2, dur, vol){
+      var a = ac(); if(!a) return;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "triangle";
+      var s = a.currentTime;
+      o.frequency.setValueAtTime(f1, s);
+      o.frequency.exponentialRampToValueAtTime(f2, s + dur);
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(vol, s + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(s); o.stop(s + dur + 0.05);
+    }
+    function blip(freq, dur, vol){ tone(freq, 0, dur, vol); }
 
     function heartPath(ctx, x, y, s){
       ctx.beginPath();
@@ -237,6 +252,34 @@
       ctx.bezierCurveTo(x - s * 1.25, y + s * 0.05, x - s * 0.78, y - s * 0.95, x, y - s * 0.28);
       ctx.bezierCurveTo(x + s * 0.78, y - s * 0.95, x + s * 1.25, y + s * 0.05, x, y + s * 0.82);
       ctx.closePath();
+    }
+    function shade(hex, f){
+      var n = parseInt(hex.slice(1), 16);
+      var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      function cl(v){ return Math.max(0, Math.min(255, Math.round(v))); }
+      if(f >= 0){ r = cl(r + (255 - r) * f); g = cl(g + (255 - g) * f); b = cl(b + (255 - b) * f); }
+      else { r = cl(r * (1 + f)); g = cl(g * (1 + f)); b = cl(b * (1 + f)); }
+      return "rgb(" + r + "," + g + "," + b + ")";
+    }
+    /* realistic heart: soft shadow, glossy gradient, bright highlight */
+    function drawHeart(x, y, s, color){
+      ctx.save();
+      ctx.fillStyle = "rgba(60,10,30,.18)";
+      heartPath(ctx, x + 2, y + 4, s); ctx.fill();
+      var g = ctx.createRadialGradient(x - s * 0.4, y - s * 0.45, s * 0.1, x, y, s * 1.25);
+      g.addColorStop(0, shade(color, 0.45));
+      g.addColorStop(0.55, color);
+      g.addColorStop(1, shade(color, -0.3));
+      ctx.fillStyle = g;
+      heartPath(ctx, x, y, s); ctx.fill();
+      ctx.strokeStyle = shade(color, -0.4); ctx.globalAlpha = 0.25; ctx.lineWidth = 1.5;
+      heartPath(ctx, x, y, s); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "rgba(255,255,255,.5)";
+      ctx.beginPath(); ctx.ellipse(x - s * 0.38, y - s * 0.38, s * 0.22, s * 0.12, -0.6, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,.75)";
+      ctx.beginPath(); ctx.arc(x - s * 0.3, y - s * 0.32, s * 0.09, 0, 7); ctx.fill();
+      ctx.restore();
     }
 /* ================= GAME 1 : HEART POP ================= */
     (function(){
@@ -393,6 +436,7 @@
       function shoot(){
         if(flying) return;
         ac();
+        sweep(320, 780, 0.14, 0.09);
         flying = { x: SH_X, y: SH_Y, vx: Math.cos(aimAngle) * 13, vy: Math.sin(aimAngle) * 13, color: cur };
         cur = next; next = randPresent();
         syncHud();
@@ -401,8 +445,8 @@
       function step(){
         if(flying){
           flying.x += flying.vx; flying.y += flying.vy;
-          if(flying.x < R){ flying.x = R; flying.vx = Math.abs(flying.vx); }
-          if(flying.x > W - R){ flying.x = W - R; flying.vx = -Math.abs(flying.vx); }
+          if(flying.x < R){ flying.x = R; flying.vx = Math.abs(flying.vx); blip(720, 0.06, 0.05); }
+          if(flying.x > W - R){ flying.x = W - R; flying.vx = -Math.abs(flying.vx); blip(720, 0.06, 0.05); }
           var placed = false;
           if(flying.y <= R + 10){ placeBall(flying.x, flying.y); placed = true; }
           if(!placed){
@@ -438,35 +482,43 @@
         /* grid hearts */
         for(var r = 0; r < ROWS; r++) for(var c = 0; c < colsInRow(r); c++){
           var v = grid[r][c]; if(v === null) continue;
-          ctx.fillStyle = v;
-          heartPath(ctx, cellX(r,c), cellY(r), R * 0.92); ctx.fill();
-          ctx.fillStyle = "rgba(255,255,255,.35)";
-          ctx.beginPath(); ctx.arc(cellX(r,c) - R*0.35, cellY(r) - R*0.3, R*0.16, 0, 7); ctx.fill();
+          drawHeart(cellX(r,c), cellY(r), R * 0.92, v);
         }
 
-        /* aim guide */
+        /* aim guide — long, with one wall bounce, like a real bubble shooter */
         if(!flying){
           ctx.save();
-          ctx.strokeStyle = "rgba(43,18,32,.45)"; ctx.lineWidth = 4; ctx.setLineDash([2, 14]);
+          ctx.strokeStyle = "rgba(43,18,32,.5)"; ctx.lineWidth = 4; ctx.setLineDash([2, 14]);
           ctx.lineCap = "round";
-          ctx.beginPath();
-          ctx.moveTo(SH_X, SH_Y);
-          ctx.lineTo(SH_X + Math.cos(aimAngle) * 150, SH_Y + Math.sin(aimAngle) * 150);
+          var ax = SH_X, ay = SH_Y, dx = Math.cos(aimAngle), dy = Math.sin(aimAngle);
+          var remain = 600, guard = 0;
+          ctx.beginPath(); ctx.moveTo(ax, ay);
+          while(remain > 0 && guard < 4){
+            guard++;
+            var toWall = (dx > 0) ? (W - R - ax) / dx : (dx < 0) ? (R - ax) / dx : 1e9;
+            if(toWall <= 0){ dx = -dx; continue; }
+            var stepLen = Math.min(remain, toWall);
+            ax += dx * stepLen; ay += dy * stepLen;
+            ctx.lineTo(ax, ay);
+            remain -= stepLen;
+            if(stepLen === toWall) dx = -dx;
+            if(ay <= R + 10) break;
+          }
           ctx.stroke(); ctx.restore();
+          ctx.save();
+          ctx.fillStyle = "rgba(43,18,32,.55)";
+          ctx.beginPath(); ctx.arc(ax, ay, 7, 0, 7); ctx.fill();
+          ctx.restore();
         }
 
         /* shooter base + current heart */
         ctx.fillStyle = "#2b1220";
         ctx.beginPath(); ctx.arc(SH_X, SH_Y + 34, 40, Math.PI, 0); ctx.fill();
         if(!flying){
-          ctx.fillStyle = cur;
-          heartPath(ctx, SH_X, SH_Y, R * 0.95); ctx.fill();
-          ctx.fillStyle = "rgba(255,255,255,.4)";
-          ctx.beginPath(); ctx.arc(SH_X - R*0.35, SH_Y - R*0.3, R*0.16, 0, 7); ctx.fill();
+          drawHeart(SH_X, SH_Y, R * 0.95, cur);
         }
         if(flying){
-          ctx.fillStyle = flying.color;
-          heartPath(ctx, flying.x, flying.y, R * 0.95); ctx.fill();
+          drawHeart(flying.x, flying.y, R * 0.95, flying.color);
         }
 
         /* particles */
@@ -497,6 +549,7 @@
       cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); shoot(); } dragging = false; });
       cv.addEventListener("pointercancel", function(){ dragging = false; });
       document.getElementById("popRestart").addEventListener("click", function(){
+        blip(520, 0.08, 0.08);
         reset(); showToast(toast, "Naya board — good luck!");
       });
 
