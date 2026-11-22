@@ -284,6 +284,7 @@ function disposeObj(obj){
 }
 function reset(){ S.lane=0;S.targetLane=0;S.x=0;S.jumpY=0;S.jumpV=0;S.sliding=0;S.speed=15;S.dist=0;S.score=0;S.hearts=0;S.combo=0;S.bestCombo=0;S.ancyGap=.82;S.invuln=0;S.shake=0;S.shield=false;S.magnet=0;S.double=0;S.boost=0;S.spawnT=1.4;S.heartT=.9;S.powerT=11;S.time=0;S.milestones={};
   S.strikes=0;S.ancyState='chase';S.ancyT=0;S.catchT=0;S.grabbed=false;S.slowT=0;S.countT=0;S.lastCount=9;S.sorryT=0;S.sorryPhase=0;S.hugT0=0;
+  ancy.inner.rotation.y=0;
   const sp=document.getElementById('sorryPrompt'); if(sp)sp.classList.add('hidden');
   const cn=document.getElementById('countNum'); if(cn)cn.style.display='none'; hideAncySay();
   for(const e of entities){ scene.remove(e.obj); disposeObj(e.obj); } entities=[];
@@ -5844,7 +5845,7 @@ function render(dt){
     harsh.legL.pivot.rotation.x=0.14; harsh.legR.pivot.rotation.x=-0.1; harsh.legL.mid.rotation.x=0.06; harsh.legR.mid.rotation.x=0.06;
     harsh.armL.pivot.rotation.x=0.3; harsh.armR.pivot.rotation.x=0.3; harsh.inner.rotation.x=0; harsh.inner.rotation.z=0;
     harsh.inner.rotation.y=0.55; harsh.inner.position.y=Math.abs(Math.sin(S.time*7))*0.05;
-  } else harsh.inner.rotation.y=(S.targetLane-S.x)*0.35;
+  } else harsh.inner.rotation.y+=((S.targetLane-S.x)*0.35-harsh.inner.rotation.y)*Math.min(1,dt*8);
   if(S.mode==='sorry'){
     const _sT=S.sorryT, _turn=Math.min(1,_sT/0.6), _bow=Math.max(0,Math.min(1,(_sT-0.5)/0.6))*(_sT>4.6?Math.max(0,1-(_sT-4.6)/0.8):1);
     harsh.inner.rotation.y=-1.5*_turn; harsh.inner.rotation.x=-0.45*_bow; harsh.inner.position.y=-0.22*_bow; harsh.inner.rotation.z=0;
@@ -5866,7 +5867,7 @@ function render(dt){
   /* Safety: Ancy must never get close to the camera (giant at the bottom of the screen).
      Clamp her distance from the camera, not just her x. Camera z is 8.4 in run mode, 6.9 in catch/sorry. */
   az=Math.min(az,camera.position.z-3.0);
-  { const _ct=(8.4-az)/14.4, _ccx=px*0.55+(px*0.3-px*0.55)*_ct, _hw=Math.tan(camera.fov*0.5*Math.PI/180)*Math.max(1,8.4-az)*camera.aspect*0.95;
+  if(S.mode!=='catch'&&S.mode!=='caught'&&S.mode!=='sorry'&&!over){ /* In catch/sorry the camera centres on the pair, so Ancy is on screen by construction — clamping here would crush the hug offset (0.45) in the side lanes. */ const _ct=(8.4-az)/14.4, _ccx=px*0.55+(px*0.3-px*0.55)*_ct, _hw=Math.tan(camera.fov*0.5*Math.PI/180)*Math.max(1,8.4-az)*camera.aspect*0.95;
     if(_hw>0.7) ax=Math.max(_ccx-_hw+0.75,Math.min(_ccx+_hw-0.75,ax)); }
   ancy.root.position.set(ax,0,az); ancy.root.scale.setScalar(ascale);
   // speech bubbles hover over whoever is talking
@@ -5895,6 +5896,7 @@ function render(dt){
     const _hk=Math.min(1,(S.sorryT-(S.hugT0||S.sorryT))/0.8);
     const _bw=Math.max(0,Math.min(1,(S.sorryT-0.5)/0.6))*(S.sorryT>4.6?Math.max(0,1-(S.sorryT-4.6)/0.8):1);
     harsh.inner.rotation.x=-0.45*_bw*(1-_hk)-0.02*_hk; ancy.inner.rotation.x=-0.02*_hk; }
+  if(S.mode!=='sorry'&&S.mode!=='catch'&&S.mode!=='caught'&&!over){ /* After sorry/catch, ease Ancy back to facing forward — never snap. (Arm pivot z is owned by animateRunner's +-0.06 running splay, so it needs no easing.) */ const _d=Math.min(1,dt*8); ancy.inner.rotation.y+=(0-ancy.inner.rotation.y)*_d; }
   fxPost(dt,px);
   // camera
   let cx=px*0.55, cy=5.3+S.jumpY*0.22, cz=8.4;
