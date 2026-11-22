@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Heart Catch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --ink: #4a2432;
+        --ink-soft: #7a4a58;
+        --paper: #fff7f1;
+        --card: #ffffff;
+        --rose: #e5484d;
+        --rose-deep: #c22f42;
+        --coral: #ff7a66;
+        --gold: #e9a13b;
+        --line: #f0d5c8;
+        --shadow: 0 18px 40px rgba(146, 64, 62, 0.18);
+        --sky-top: #ffe9d2;
+        --sky-mid: #ffd9c4;
+        --sky-bot: #ffbfa8;
+        --hud-bg: rgba(255, 250, 246, 0.92);
+        --overlay-bg: rgba(255, 244, 236, 0.94);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #f6e3da;
+          --ink-soft: #d9a89b;
+          --paper: #241418;
+          --card: #2f1b21;
+          --rose: #ff6b74;
+          --rose-deep: #ff8a7a;
+          --coral: #ff9078;
+          --gold: #f2b95c;
+          --line: #4c2c33;
+          --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+          --sky-top: #2b1a26;
+          --sky-mid: #3a2030;
+          --sky-bot: #4c2739;
+          --hud-bg: rgba(43, 24, 30, 0.92);
+          --overlay-bg: rgba(36, 19, 25, 0.95);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: var(--paper);
+        color: var(--ink);
+        min-height: 100dvh;
+        -webkit-font-smoothing: antialiased;
+      }
+      button { font-family: inherit; min-height: 44px; }
+      .wrap {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 14px 14px 28px;
+      }
+      /* ---------- HUD ---------- */
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        background: var(--hud-bg);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 8px 10px;
+        box-shadow: var(--shadow);
+      }
+      .stat {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-weight: 800;
+        font-size: 1rem;
+        padding: 6px 12px 6px 9px;
+        border-radius: 999px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        min-height: 44px;
+      }
+      .stat svg { width: 20px; height: 20px; flex: none; }
+      .stat small { font-weight: 700; color: var(--ink-soft); font-size: 0.78rem; }
+      .stat .num { font-variant-numeric: tabular-nums; min-width: 1.4ch; text-align: center; }
+      .hud-spacer { flex: 1 1 auto; }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--ink);
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 800;
+        padding: 0 12px;
+        width: auto;
+        min-width: 44px;
+      }
+      .icon-btn svg { width: 19px; height: 19px; flex: none; }
+      .icon-btn[aria-pressed="true"] { background: var(--rose); border-color: var(--rose); color: #fff; }
+      .icon-btn:active { transform: scale(0.96); }
+      /* ---------- Message ribbon ---------- */
+      .ribbon {
+        margin-top: 12px;
+        min-height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 10px 18px;
+        border-radius: 16px;
+        background: var(--card);
+        border: 1px dashed var(--line);
+      }
+      .ribbon p {
+        margin: 0;
+        font-family: "DM Serif Display", Georgia, serif;
+        font-size: clamp(1.15rem, 4.6vw, 1.45rem);
+        line-height: 1.3;
+        color: var(--ink);
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+      .ribbon p.swap { opacity: 0; transform: translateY(5px); }
+      /* ---------- Stage ---------- */
+      .stage {
+        position: relative;
+        margin-top: 12px;
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bot) 100%);
+        height: min(66dvh, 560px);
+        min-height: 380px;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      canvas { display: block; width: 100%; height: 100%; }
+      /* ---------- Overlays ---------- */
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 26px 22px;
+        background: var(--overlay-bg);
+        backdrop-filter: blur(3px);
+        z-index: 5;
+      }
+      .overlay[hidden] { display: none; }
+      .overlay .big-heart { width: 62px; height: 62px; margin-bottom: 6px; animation: beat 1.6s ease-in-out infinite; }
+      @keyframes beat {
+        0%, 100% { transform: scale(1); }
+        12% { transform: scale(1.12); }
+        24% { transform: scale(1); }
+        36% { transform: scale(1.08); }
+        48% { transform: scale(1); }
+      }
+      .overlay h1, .overlay h2 {
+        font-family: "DM Serif Display", Georgia, serif;
+        font-weight: 400;
+        margin: 6px 0 8px;
+        font-size: clamp(1.9rem, 7vw, 2.6rem);
+        line-height: 1.12;
+      }
+      .overlay p {
+        margin: 0 0 6px;
+        color: var(--ink-soft);
+        font-size: 1rem;
+        line-height: 1.55;
+        max-width: 42ch;
+        font-weight: 600;
+      }
+      .overlay .final-line {
+        font-family: "DM Serif Display", Georgia, serif;
+        font-size: clamp(1.35rem, 5.6vw, 1.8rem);
+        color: var(--ink);
+        margin: 4px 0 10px;
+        line-height: 1.3;
+      }
+      .overlay .tally {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin: 10px 0 18px;
+      }
+      .overlay .tally span {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 16px;
+        font-weight: 800;
+        font-size: 0.95rem;
+      }
+      .cta {
+        margin-top: 14px;
+        border: none;
+        cursor: pointer;
+        background: var(--rose);
+        color: #fff;
+        font-weight: 800;
+        font-size: 1.05rem;
+        padding: 13px 34px;
+        border-radius: 999px;
+        box-shadow: 0 10px 22px rgba(229, 72, 77, 0.35);
+        transition: transform 0.15s ease, background 0.15s ease;
+      }
+      .cta:hover { background: var(--rose-deep); }
+      .cta:active { transform: scale(0.97); }
+      .ghost-btn {
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--ink);
+        font-weight: 800;
+        font-size: 0.95rem;
+        padding: 10px 24px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      /* ---------- Hint ---------- */
+      .hint {
+        margin: 14px 4px 0;
+        text-align: center;
+        color: var(--ink-soft);
+        font-size: 0.92rem;
+        font-weight: 600;
+        line-height: 1.6;
+      }
+      .hint b { color: var(--ink); }
+      .gold-dot {
+        display: inline-block;
+        width: 11px; height: 11px;
+        border-radius: 50%;
+        background: var(--gold);
+        vertical-align: -1px;
+        margin: 0 2px;
+        box-shadow: 0 0 6px rgba(233, 161, 59, 0.7);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .overlay .big-heart { animation: none; }
+        .ribbon p { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <!-- HUD -->
+      <div class="hud" role="region" aria-label="Game status">
+        <span class="stat" aria-label="Hearts caught">
+          <svg viewBox="0 0 24 24" fill="#e5484d" aria-hidden="true"><path d="M12 21s-7.5-4.9-10-9.3C.4 8.6 2.3 5 5.7 5c2 0 3.4 1.1 4.3 2.4h4c.9-1.3 2.3-2.4 4.3-2.4 3.4 0 5.3 3.6 3.7 6.7C19.5 16.1 12 21 12 21z" transform="scale(0.92) translate(1,0)"/></svg>
+          <span class="num" id="scoreNum">0</span>
+          <small>hearts caught</small>
+        </span>
+        <span class="stat" aria-label="Current streak">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#e9a13b" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+          <span class="num" id="streakNum">0</span>
+          <small>streak</small>
+        </span>
+        <span class="hud-spacer"></span>
+        <button class="icon-btn" id="musicBtn" type="button" aria-pressed="false" aria-label="Toggle calm music">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span>Music</span>
+        </button>
+        <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause game">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.4"/><rect x="14" y="4" width="4" height="16" rx="1.4"/></svg>
+          <span>Pause</span>
+        </button>
+        <button class="icon-btn" id="endBtn" type="button" aria-label="End and rest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <span>Rest</span>
+        </button>
+        <a class="icon-btn" href="index.html" aria-label="Back to menu" style="text-decoration:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+          <span>Menu</span>
+        </a>
+      </div>
+
+      <!-- Message ribbon -->
+      <div class="ribbon" aria-live="polite">
+        <p id="lineText">With every heart, a little message for you.</p>
+      </div>
+
+      <!-- Stage -->
+      <section class="stage" id="stage" aria-label="Heart Catch game area">
+        <canvas id="game"></canvas>
+
+        <!-- Start screen -->
+        <div class="overlay" id="startScreen">
+          <svg class="big-heart" viewBox="0 0 24 24" fill="#e5484d" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <h1>Heart Catch</h1>
+          <p>Hearts will fall slowly, one by one. Move the basket and catch them — that's all.</p>
+          <p>No timer, no losing. If a heart slips away, it's okay — the next one is on its way.</p>
+          <p>Every heart you catch opens a little line for you. The <span class="gold-dot" aria-hidden="true"></span> golden heart is the most special one.</p>
+          <button class="cta" id="startBtn" type="button">Start playing</button>
+        </div>
+
+        <!-- Pause screen -->
+        <div class="overlay" id="pauseScreen" hidden>
+          <h2>A little pause</h2>
+          <p>Take a breath. The game is waiting right here — come back whenever you feel like it.</p>
+          <button class="cta" id="resumeBtn" type="button">Resume</button>
+        </div>
+
+        <!-- End screen -->
+        <div class="overlay" id="endScreen" hidden>
+          <svg class="big-heart" viewBox="0 0 24 24" fill="#e5484d" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <h2>That's all for today</h2>
+          <p class="final-line">As many hearts, that much love — always.</p>
+          <div class="tally">
+            <span id="finalHearts">0 hearts caught</span>
+            <span id="finalStreak">Best streak 0</span>
+            <span id="finalBest">Session best 0</span>
+          </div>
+          <p>I hope this brought you a little peace. Whenever you feel like it, the hearts will be falling right here.</p>
+          <button class="cta" id="replayBtn" type="button">Play again</button>
+        </div>
+      </section>
+
+      <p class="hint">
+        <b>How to play:</b> <b>drag</b> the basket (with your finger or mouse), or press the <b>&larr; &rarr;</b> arrow keys.
+        Catch the hearts, read the lines, and just relax.
+      </p>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+
+        /* ---------------- Lines ---------------- */
+        var LINES = [
+          "I'm with you.",
+          "Take a breath — I'm right here.",
+          "Every heart, only for you.",
+          "Take your time — there's no rush.",
+          "I'm not going anywhere.",
+          "You are not alone.",
+          "Rest a little — everything else can wait.",
+          "Everything will be okay.",
+          "I'm right here, always.",
+          "Just give me one smile.",
+          "This day will pass too — I'm with you.",
+          "You matter — never forget that."
+        ];
+        var GOLD_LINE = "This heart is the most special — just like you.";
+        var IDLE_LINE = "With every heart, a little message for you.";
+
+        /* ---------------- Elements ---------------- */
+        var stage = document.getElementById("stage");
+        var canvas = document.getElementById("game");
+        var ctx = canvas.getContext("2d");
+        var scoreNum = document.getElementById("scoreNum");
+        var streakNum = document.getElementById("streakNum");
+        var lineText = document.getElementById("lineText");
+        var startScreen = document.getElementById("startScreen");
+        var pauseScreen = document.getElementById("pauseScreen");
+        var endScreen = document.getElementById("endScreen");
+        var startBtn = document.getElementById("startBtn");
+        var resumeBtn = document.getElementById("resumeBtn");
+        var replayBtn = document.getElementById("replayBtn");
+        var pauseBtn = document.getElementById("pauseBtn");
+        var endBtn = document.getElementById("endBtn");
+        var musicBtn = document.getElementById("musicBtn");
+        var finalHearts = document.getElementById("finalHearts");
+        var finalStreak = document.getElementById("finalStreak");
+        var finalBest = document.getElementById("finalBest");
+
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        /* ---------------- State ---------------- */
+        var W = 0, H = 0, DPR = 1;
+        var state = "start"; // start | playing | paused | ended
+        var hearts = [];
+        var particles = [];
+        var clouds = [];
+        var score = 0;
+        var streak = 0;
+        var bestStreak = 0;
+        var sessionBest = 0; // in-memory only, this session
+        var lineIdx = 0;
+        var spawnTimer = 0;
+        var elapsed = 0;
+        var lastTs = 0;
+        var rafId = null;
+
+        var basket = { x: 0, w: 96, h: 40, targetX: 0, speed: 0 };
+        var keys = { left: false, right: false };
+
+        var HEART_COLORS = ["#e5484d", "#f2607c", "#ff7a66", "#ef5da8", "#d94350"];
+
+        /* ---------------- Canvas sizing ---------------- */
+        function resize() {
+          var r = stage.getBoundingClientRect();
+          DPR = Math.min(window.devicePixelRatio || 1, 2);
+          W = r.width; H = r.height;
+          canvas.width = Math.round(W * DPR);
+          canvas.height = Math.round(H * DPR);
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+          basket.w = Math.max(78, Math.min(120, W * 0.22));
+          if (!basket.x) { basket.x = W / 2; basket.targetX = W / 2; }
+          basket.x = Math.max(basket.w / 2, Math.min(W - basket.w / 2, basket.x));
+          basket.targetX = Math.max(basket.w / 2, Math.min(W - basket.w / 2, basket.targetX));
+          seedClouds();
+        }
+        function seedClouds() {
+          clouds = [];
+          var n = 4;
+          for (var i = 0; i < n; i++) {
+            clouds.push({
+              x: Math.random() * W,
+              y: 20 + Math.random() * H * 0.35,
+              r: 26 + Math.random() * 34,
+              v: 4 + Math.random() * 6,
+              a: 0.10 + Math.random() * 0.10
+            });
+          }
+        }
+
+        /* ---------------- Drawing helpers ---------------- */
+        function heartPath(c, x, y, s) {
+          c.beginPath();
+          c.moveTo(x, y + s * 0.92);
+          c.bezierCurveTo(x - s * 1.15, y + s * 0.25, x - s * 0.72, y - s * 0.78, x, y - s * 0.28);
+          c.bezierCurveTo(x + s * 0.72, y - s * 0.78, x + s * 1.15, y + s * 0.25, x, y + s * 0.92);
+          c.closePath();
+        }
+        function drawHeart(h) {
+          ctx.save();
+          ctx.translate(h.x, h.y);
+          ctx.rotate(Math.sin(h.sway) * 0.14);
+          if (h.gold) {
+            ctx.shadowColor = "rgba(233,161,59,0.85)";
+            ctx.shadowBlur = 18;
+          }
+          heartPath(ctx, 0, 0, h.size);
+          ctx.fillStyle = h.color;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          // soft shine
+          ctx.beginPath();
+          ctx.ellipse(-h.size * 0.32, -h.size * 0.28, h.size * 0.20, h.size * 0.12, -0.6, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255,255,255,0.45)";
+          ctx.fill();
+          ctx.restore();
+        }
+        function drawBasket() {
+          var bx = basket.x - basket.w / 2;
+          var by = H - 56;
+          var bw = basket.w, bh = 34;
+          ctx.save();
+          // body (trapezoid)
+          ctx.beginPath();
+          ctx.moveTo(bx + 4, by);
+          ctx.lineTo(bx + bw - 4, by);
+          ctx.lineTo(bx + bw - 14, by + bh);
+          ctx.quadraticCurveTo(bx + bw / 2, by + bh + 7, bx + 14, by + bh);
+          ctx.closePath();
+          var grad = ctx.createLinearGradient(0, by, 0, by + bh + 6);
+          grad.addColorStop(0, "#b06a41");
+          grad.addColorStop(1, "#8a4f2c");
+          ctx.fillStyle = grad;
+          ctx.fill();
+          // weave lines
+          ctx.strokeStyle = "rgba(70,38,16,0.35)";
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(bx + 8, by + 12); ctx.lineTo(bx + bw - 8, by + 12);
+          ctx.moveTo(bx + 11, by + 23); ctx.lineTo(bx + bw - 11, by + 23);
+          ctx.stroke();
+          // rim
+          ctx.beginPath();
+          var rimR = 7;
+          ctx.moveTo(bx - 3 + rimR, by - 7);
+          ctx.lineTo(bx + bw + 3 - rimR, by - 7);
+          ctx.quadraticCurveTo(bx + bw + 3, by - 7, bx + bw + 3, by - 7 + rimR);
+          ctx.lineTo(bx + bw + 3, by + 2);
+          ctx.quadraticCurveTo(bx + bw + 3, by + 7, bx + bw - 2, by + 7);
+          ctx.lineTo(bx + 2, by + 7);
+          ctx.quadraticCurveTo(bx - 3, by + 7, bx - 3, by + 2);
+          ctx.lineTo(bx - 3, by - 7 + rimR);
+          ctx.quadraticCurveTo(bx - 3, by - 7, bx - 3 + rimR, by - 7);
+          ctx.closePath();
+          ctx.fillStyle = "#c97e4e";
+          ctx.fill();
+          // little heart emblem
+          heartPath(ctx, basket.x, by + 15, 8);
+          ctx.fillStyle = "#ffd9d2";
+          ctx.fill();
+          ctx.restore();
+        }
+        function drawClouds(dt) {
+          ctx.save();
+          for (var i = 0; i < clouds.length; i++) {
+            var cl = clouds[i];
+            cl.x += cl.v * dt;
+            if (cl.x - cl.r * 2.4 > W) cl.x = -cl.r * 2.4;
+            ctx.globalAlpha = cl.a;
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.ellipse(cl.x, cl.y, cl.r * 1.5, cl.r * 0.55, 0, 0, Math.PI * 2);
+            ctx.ellipse(cl.x - cl.r * 0.7, cl.y + 4, cl.r * 0.8, cl.r * 0.4, 0, 0, Math.PI * 2);
+            ctx.ellipse(cl.x + cl.r * 0.7, cl.y + 4, cl.r * 0.85, cl.r * 0.42, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+        function spawnParticles(x, y, gold) {
+          if (reduceMotion) return;
+          var n = gold ? 18 : 11;
+          for (var i = 0; i < n; i++) {
+            particles.push({
+              x: x, y: y,
+              vx: (Math.random() - 0.5) * 130,
+              vy: -40 - Math.random() * 110,
+              life: 1,
+              decay: 0.9 + Math.random() * 0.7,
+              size: 2 + Math.random() * 3.2,
+              color: gold ? "#e9a13b" : "#ff8d84"
+            });
+          }
+        }
+        function drawParticles(dt) {
+          for (var i = particles.length - 1; i >= 0; i--) {
+            var p = particles[i];
+            p.life -= p.decay * dt;
+            if (p.life <= 0) { particles.splice(i, 1); continue; }
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += 60 * dt;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life) * 0.9;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        /* ---------------- Game logic ---------------- */
+        function spawnHeart() {
+          var gold = Math.random() < 0.08;
+          hearts.push({
+            x: 30 + Math.random() * (W - 60),
+            y: -26,
+            size: 13 + Math.random() * 7,
+            speed: 52 + Math.random() * 34 + Math.min(26, elapsed * 0.35),
+            swayPhase: Math.random() * Math.PI * 2,
+            sway: 0,
+            gold: gold,
+            color: gold ? "#e9a13b" : HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)]
+          });
+        }
+        function setLine(text) {
+          lineText.classList.add("swap");
+          setTimeout(function () {
+            lineText.textContent = text;
+            lineText.classList.remove("swap");
+          }, reduceMotion ? 0 : 180);
+        }
+        function onCatch(h) {
+          if (h.gold) {
+            score += 5;
+            setLine(GOLD_LINE);
+          } else {
+            score += 1;
+            setLine(LINES[lineIdx % LINES.length]);
+            lineIdx++;
+          }
+          streak++;
+          if (streak > bestStreak) bestStreak = streak;
+          if (score > sessionBest) sessionBest = score;
+          scoreNum.textContent = score;
+          streakNum.textContent = streak;
+          spawnParticles(h.x, H - 62, h.gold);
+        }
+        function onMiss() {
+          streak = 0;
+          streakNum.textContent = "0";
+        }
+
+        function update(dt) {
+          elapsed += dt;
+          // spawn
+          spawnTimer -= dt;
+          var interval = Math.max(0.62, 1.05 - elapsed * 0.004);
+          if (spawnTimer <= 0) { spawnHeart(); spawnTimer = interval; }
+          // basket keyboard movement
+          var kb = 340 * dt;
+          if (keys.left) basket.targetX -= kb;
+          if (keys.right) basket.targetX += kb;
+          basket.targetX = Math.max(basket.w / 2, Math.min(W - basket.w / 2, basket.targetX));
+          basket.x += (basket.targetX - basket.x) * Math.min(1, dt * 14);
+          // hearts
+          var basketTop = H - 63;
+          for (var i = hearts.length - 1; i >= 0; i--) {
+            var h = hearts[i];
+            h.y += h.speed * dt;
+            h.swayPhase += dt * 1.6;
+            h.sway = h.swayPhase;
+            h.x += Math.sin(h.swayPhase) * 12 * dt;
+            if (h.y >= basketTop && h.y <= basketTop + 26 && Math.abs(h.x - basket.x) <= basket.w / 2 + 6) {
+              hearts.splice(i, 1);
+              onCatch(h);
+              continue;
+            }
+            if (h.y > H + 30) {
+              hearts.splice(i, 1);
+              onMiss();
+            }
+          }
+        }
+        function render(dt) {
+          ctx.clearRect(0, 0, W, H);
+          drawClouds(state === "playing" ? dt : 0);
+          for (var i = 0; i < hearts.length; i++) drawHeart(hearts[i]);
+          drawParticles(dt);
+          drawBasket();
+        }
+        function loop(ts) {
+          if (state !== "playing") return;
+          if (!lastTs) lastTs = ts;
+          var dt = Math.min(0.05, (ts - lastTs) / 1000);
+          lastTs = ts;
+          update(dt);
+          render(dt);
+          rafId = requestAnimationFrame(loop);
+        }
+        function startLoop() {
+          lastTs = 0;
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(loop);
+        }
+
+        /* ---------------- Flow ---------------- */
+        function newGame() {
+          hearts = []; particles = [];
+          score = 0; streak = 0; bestStreak = 0; lineIdx = 0;
+          elapsed = 0; spawnTimer = 0.3;
+          scoreNum.textContent = "0";
+          streakNum.textContent = "0";
+          setLine(IDLE_LINE);
+        }
+        function show(el) { el.hidden = false; }
+        function hide(el) { el.hidden = true; }
+        function play() {
+          hide(startScreen); hide(endScreen); hide(pauseScreen);
+          state = "playing";
+          startLoop();
+        }
+        function pauseGame() {
+          if (state !== "playing") return;
+          state = "paused";
+          if (rafId) cancelAnimationFrame(rafId);
+          render(0);
+          show(pauseScreen);
+        }
+        function endGame() {
+          if (state === "start") return;
+          state = "ended";
+          if (rafId) cancelAnimationFrame(rafId);
+          render(0);
+          hide(pauseScreen); hide(startScreen);
+          finalHearts.textContent = score + (score === 1 ? " heart caught" : " hearts caught");
+          finalStreak.textContent = "Best streak " + bestStreak;
+          finalBest.textContent = "Session best " + sessionBest;
+          show(endScreen);
+        }
+
+        startBtn.addEventListener("click", function () { newGame(); play(); });
+        replayBtn.addEventListener("click", function () { newGame(); play(); });
+        resumeBtn.addEventListener("click", function () { hide(pauseScreen); state = "playing"; startLoop(); });
+        pauseBtn.addEventListener("click", function () {
+          if (state === "playing") pauseGame();
+          else if (state === "paused") { hide(pauseScreen); state = "playing"; startLoop(); }
+        });
+        endBtn.addEventListener("click", endGame);
+
+        /* ---------------- Controls ---------------- */
+        function pointerX(e) {
+          var r = stage.getBoundingClientRect();
+          return e.clientX - r.left;
+        }
+        var dragging = false;
+        stage.addEventListener("pointerdown", function (e) {
+          if (state !== "playing") return;
+          dragging = true;
+          basket.targetX = Math.max(basket.w / 2, Math.min(W - basket.w / 2, pointerX(e)));
+        });
+        stage.addEventListener("pointermove", function (e) {
+          if (state !== "playing" || !dragging) return;
+          basket.targetX = Math.max(basket.w / 2, Math.min(W - basket.w / 2, pointerX(e)));
+        });
+        window.addEventListener("pointerup", function () { dragging = false; });
+        window.addEventListener("keydown", function (e) {
+          if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { keys.left = true; if (state === "playing") e.preventDefault(); }
+          if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { keys.right = true; if (state === "playing") e.preventDefault(); }
+          if ((e.key === " " || e.key === "Enter") && state === "paused") { hide(pauseScreen); state = "playing"; startLoop(); }
+        });
+        window.addEventListener("keyup", function (e) {
+          if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = false;
+          if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = false;
+        });
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden && state === "playing") pauseGame();
+        });
+
+        /* ---------------- Calm music (WebAudio, generated in-page) ---------------- */
+        var audioCtx = null, musicNodes = null, musicOn = false;
+        function startMusic() {
+          if (!audioCtx) {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            audioCtx = new AC();
+          }
+          if (audioCtx.state === "suspended") audioCtx.resume();
+          var master = audioCtx.createGain();
+          master.gain.value = 0;
+          master.connect(audioCtx.destination);
+          master.gain.linearRampToValueAtTime(0.055, audioCtx.currentTime + 2.5);
+          // warm pad: C major add9 chord, very slow breathing LFO
+          var freqs = [130.81, 196.0, 261.63, 329.63, 493.88];
+          var oscs = [];
+          for (var i = 0; i < freqs.length; i++) {
+            var o = audioCtx.createOscillator();
+            o.type = i < 2 ? "sine" : "triangle";
+            o.frequency.value = freqs[i];
+            o.detune.value = (Math.random() - 0.5) * 7;
+            var g = audioCtx.createGain();
+            g.gain.value = i < 2 ? 0.5 : 0.22;
+            o.connect(g); g.connect(master);
+            o.start();
+            oscs.push(o);
+          }
+          var lfo = audioCtx.createOscillator();
+          lfo.frequency.value = 0.07;
+          var lfoGain = audioCtx.createGain();
+          lfoGain.gain.value = 0.018;
+          lfo.connect(lfoGain); lfoGain.connect(master.gain);
+          lfo.start();
+          // gentle high shimmer note that comes and goes
+          var shimmer = audioCtx.createOscillator();
+          shimmer.type = "sine";
+          shimmer.frequency.value = 783.99;
+          var shimmerGain = audioCtx.createGain();
+          shimmerGain.gain.value = 0;
+          shimmer.connect(shimmerGain); shimmerGain.connect(master);
+          shimmer.start();
+          var shimmerLfo = audioCtx.createOscillator();
+          shimmerLfo.frequency.value = 0.045;
+          var shimmerLfoGain = audioCtx.createGain();
+          shimmerLfoGain.gain.value = 0.012;
+          shimmerLfo.connect(shimmerLfoGain); shimmerLfoGain.connect(shimmerGain.gain);
+          shimmerLfo.start();
+          musicNodes = { master: master, oscs: oscs, lfo: lfo, shimmer: shimmer, shimmerLfo: shimmerLfo };
+        }
+        function stopMusic() {
+          if (!musicNodes || !audioCtx) return;
+          var nodes = musicNodes;
+          musicNodes = null;
+          nodes.master.gain.cancelScheduledValues(audioCtx.currentTime);
+          nodes.master.gain.setValueAtTime(nodes.master.gain.value, audioCtx.currentTime);
+          nodes.master.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
+          setTimeout(function () {
+            nodes.oscs.forEach(function (o) { try { o.stop(); } catch (e) {} });
+            try { nodes.lfo.stop(); nodes.shimmer.stop(); nodes.shimmerLfo.stop(); } catch (e) {}
+            try { nodes.master.disconnect(); } catch (e) {}
+          }, 900);
+        }
+        musicBtn.addEventListener("click", function () {
+          musicOn = !musicOn;
+          musicBtn.setAttribute("aria-pressed", musicOn ? "true" : "false");
+          if (musicOn) startMusic(); else stopMusic();
+        });
+
+        /* ---------------- Init ---------------- */
+        resize();
+        window.addEventListener("resize", function () { resize(); if (state !== "playing") render(0); });
+        render(0);
+      })();
+    </script>
+  </body>
+</html>
