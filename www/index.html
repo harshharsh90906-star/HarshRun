@@ -1449,8 +1449,8 @@ function newGame(){grid=[];for(var r=0;r<ROWS;r++){grid.push([]);for(var c=0;c<C
 function cluster(row,col){var color=grid[row][col];if(color===null)return[];var seen={},q=[[row,col]],out=[];seen[row+","+col]=1;while(q.length){var cur=q.pop();out.push(cur);var dirs=[[1,0],[-1,0],[0,1],[0,-1]];for(var i=0;i<4;i++){var nr=cur[0]+dirs[i][0],nc=cur[1]+dirs[i][1];if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;if(seen[nr+","+nc])continue;if(grid[nr][nc]===color){seen[nr+","+nc]=1;q.push([nr,nc]);}}}return out;}
 function countBubbles(){var n=0;for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++)if(grid[r][c]!==null)n++;return n;}
 function lowestRow(){var m=-1;for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++)if(grid[r][c]!==null&&r>m)m=r;return m;}
-/* Danger line: starts at row 7 and sinks gradually — one full row per 8 hearts popped */
-function dangerRowF(){ return Math.min(13, 8 + popped/8); }
+/* Danger line: fixed at row 8 — hearts crossing it end the game */
+function dangerRowF(){ return 8; }
 function dangerY(){ return R+4+dangerRowF()*cell*0.92; }
 function heartsPastLine(){ var lr=lowestRow(); if(lr<0)return false; return cellXY(lr,0).y + R*0.8 >= dangerY(); }
 function endGame(win){state="ended";if(raf)cancelAnimationFrame(raf);if(win)sWin();else sEnd();document.getElementById("popEndTitle").textContent=win?"You cleared them all! 🎉":"Well played!";document.getElementById("popEndStats").textContent=popped+" hearts popped · Score "+score;endScr.hidden=false;render();}
@@ -1515,8 +1515,7 @@ function snap(fx,fy){
  } else { sStick(); combo=0; }
  scoreEl.textContent=score; countEl.textContent=popped;
  flying=null; curColor=nextColor; nextColor=pickColor();
- var step=Math.floor(popped/8);
- if(step>prevLineStep){ prevLineStep=step; lineFlash=1; sLineWarn(); addFloater(W/2,Math.max(64,dangerY()-16),"⚠ Danger line dropped!"); }
+
  if(countBubbles()===0){ endGame(true); return; }
  if(heartsPastLine()){ endGame(false); }
 }
