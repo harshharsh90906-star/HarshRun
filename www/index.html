@@ -120,10 +120,6 @@ button{min-height:44px}
     <div class="stat"><b id="uiStrikes">0/2</b><span>💥 Hits</span></div>
     <div class="stat"><b id="uiDist">0m</b><span>Distance</span></div>
     <div class="stat"><b id="uiBest">0</b><span>Best</span></div>
-    <div id="ancyMeter">
-      <div class="lab"><span>How close is Ancy</span><b id="ancyLabel">Far behind — run! 🏃‍♀️</b></div>
-      <div class="mbar"><div id="ancyFill"></div></div>
-    </div>
     <div id="goalBar">
       <div class="goal-top"><span class="goal-name">🏁 Goal 2100m — Win!</span><span id="goalText">0m done • 2100m left</span><span id="goalFrac">0 / 2100m</span></div>
       <div class="goal-track"><div id="goalFill"></div><span id="goalRunner">🏃</span><span class="goal-flagmark">🏁</span></div>
@@ -5939,12 +5935,6 @@ function updateHUD(){
   const gr=hudEl('goalRunner');
   if(gr._p!==gw){ gr._p=gw; gr.style.left='calc('+gw+' - 12px)'; }
   const pct=Math.round(S.ancyGap*100);
-  const fill=hudEl('ancyFill');
-  const tripped=(S.ancyState==='gone'||S.ancyState==='tripping');
-  const w=(tripped?10:pct)+'%';
-  if(fill._w!==w){ fill._w=w; fill.style.width=w; }
-  const danger=pct<35; if(fill._d!==danger){ fill._d=danger; fill.classList.toggle('danger',danger); }
-  setTxt(hudEl('ancyLabel'), tripped?'Ancy tripped! 😂':S.ancyState==='returning'?'Ancy is coming back! 😤':S.ancyState==='surge'?'RIGHT BEHIND YOU! 😱':pct>65?'Far behind — run! 🏃‍♀️':pct>35?'Getting closer… 😬':'RIGHT BEHIND YOU! 😱');
   const warn=hudEl('warn'), wd=(S.mode==='run'&&(pct<35||S.ancyState==='surge'))?'block':'none';
   if(warn._d!==wd){ warn._d=wd; warn.style.display=wd; }
   const combo=hudEl('combo');
