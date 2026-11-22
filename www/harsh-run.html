@@ -126,7 +126,6 @@ button{min-height:44px}
     </div>
     <button class="iconbtn" id="btnSound" aria-label="Sound on or off">🔊</button>
     <button class="iconbtn" id="btnPause" aria-label="Pause game">⏸️</button>
-    <a class="iconbtn" href="index.html" aria-label="Back to menu" style="text-decoration:none">🏠</a>
     <div id="powerChips">
       <span class="chip shield" id="chipShield">🛡️ Shield active</span>
       <span class="chip magnet" id="chipMagnet">🧲 Heart Magnet · <b>0s</b></span>
@@ -5075,8 +5074,8 @@ three/build/three.module.js:
 "use strict";
 /* ================= THREE.JS SCENE ================= */
 const stageEl=document.getElementById('stage'), glEl=document.getElementById('gl');
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-let curPR=Math.min(window.devicePixelRatio||1,2.25); const minPR=Math.min(curPR,1.5);
+const renderer=new THREE.WebGLRenderer({antialias:!window.matchMedia('(pointer: coarse)').matches,powerPreference:'high-performance'});
+let curPR=Math.min(window.devicePixelRatio||1,1.5); const minPR=1;
 renderer.setPixelRatio(curPR);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFShadowMap;
