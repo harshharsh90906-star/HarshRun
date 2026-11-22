@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Connect the Stars — Harsh Games</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        --bg:#fff9fa; --ink:#2b1220; --muted:#7c5568; --card:#ffffff; --line:#f2d7df;
+        --rose:#e63950; --rose-dark:#bf2440; --gold:#ffb703; --teal:#12a594;
+        --chip:#fdeef2; --shadow:0 10px 30px rgba(191,36,64,.10);
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#150e15; --ink:#f8e9ef; --muted:#c79cae; --card:#221420; --line:#402335;
+          --chip:#331b2b; --shadow:0 10px 30px rgba(0,0,0,.45);
+        }
+      }
+      *{ box-sizing:border-box; }
+      html{ scroll-behavior:smooth; }
+      body{
+        margin:0; background:var(--bg); color:var(--ink);
+        font-family:"Nunito", system-ui, -apple-system, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      button{ min-height:44px; font-family:inherit; cursor:pointer; }
+      .wrap{ max-width:880px; margin:0 auto; padding:20px 16px 40px; }
+
+      /* ---------- header ---------- */
+      .tag{
+        display:inline-block; font-family:"Baloo 2",sans-serif; font-weight:700; font-size:13px;
+        letter-spacing:.08em; text-transform:uppercase; color:var(--rose-dark);
+        background:var(--chip); border:1px solid var(--line); padding:6px 12px; border-radius:999px; margin:0 0 12px;
+      }
+      @media (prefers-color-scheme: dark){ .tag{ color:#ff9db1; } }
+      h1{
+        font-family:"Baloo 2",sans-serif; font-weight:800; font-size:clamp(30px,6vw,44px);
+        line-height:1.08; margin:0 0 10px;
+      }
+      .lede{ font-size:17px; line-height:1.55; color:var(--muted); margin:0 0 14px; max-width:56ch; }
+      .lede strong{ color:var(--ink); }
+      .chips{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 6px; }
+      .chip{
+        font-size:13.5px; font-weight:700; padding:7px 12px; border-radius:999px;
+        border:1.5px dashed var(--line); color:var(--muted); background:var(--card);
+      }
+      .chip b{ color:var(--rose); font-weight:800; }
+
+      /* ---------- game cards ---------- */
+      .card{
+        background:var(--card); border:1.5px solid var(--line); border-radius:22px;
+        padding:18px; margin:20px 0; box-shadow:var(--shadow);
+      }
+      .card.selected{ border-color:var(--rose); box-shadow:0 0 0 3px rgba(230,57,80,.25), var(--shadow); }
+      .card-head{ display:flex; gap:14px; align-items:flex-start; margin-bottom:14px; }
+      .num{
+        flex:0 0 auto; width:46px; height:46px; border-radius:14px; display:grid; place-items:center;
+        font-family:"Baloo 2",sans-serif; font-weight:800; font-size:22px; color:#fff; background:var(--rose);
+      }
+      .num.gold{ background:#e8930c; }
+      .num.teal{ background:var(--teal); }
+      .card-head h2{
+        font-family:"Baloo 2",sans-serif; font-weight:800; font-size:26px; line-height:1.1; margin:2px 0 4px;
+      }
+      .how{ margin:0; color:var(--muted); font-size:15px; line-height:1.5; }
+      .badges{ margin-left:auto; flex:0 0 auto; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+      .badge{
+        font-size:12px; font-weight:800; padding:5px 10px; border-radius:999px; white-space:nowrap;
+        background:var(--chip); color:var(--rose-dark); border:1px solid var(--line);
+      }
+      @media (prefers-color-scheme: dark){ .badge{ color:#ff9db1; } }
+      .badge.genre{ background:transparent; color:var(--muted); }
+
+      .stage{
+        position:relative; border-radius:16px; overflow:hidden; margin:0 auto;
+        border:1.5px solid var(--line); user-select:none; -webkit-user-select:none;
+      }
+      .stage.narrow{ max-width:440px; }
+      canvas.game{ display:block; width:100%; height:auto; }
+      #popCanvas{ touch-action:none; }
+      #starCanvas{ touch-action:manipulation; }
+
+      .toast{
+        position:absolute; top:12px; left:50%; transform:translate(-50%,-8px);
+        background:rgba(24,8,16,.82); color:#fff; font-weight:800; font-size:14.5px;
+        padding:8px 16px; border-radius:999px; opacity:0; pointer-events:none;
+        transition:opacity .25s ease, transform .25s ease; white-space:nowrap; max-width:92%;
+        overflow:hidden; text-overflow:ellipsis; z-index:5;
+      }
+      .toast.show{ opacity:1; transform:translate(-50%,0); }
+
+      .hud{
+        display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin-top:14px;
+      }
+      .stat{ font-size:15px; font-weight:700; color:var(--muted); }
+      .stat b{ color:var(--ink); font-family:"Baloo 2",sans-serif; font-size:19px; }
+      .hud .spacer{ flex:1 1 auto; }
+      .btn{
+        border:none; border-radius:999px; padding:10px 20px;
+        font-family:"Baloo 2",sans-serif; font-weight:700; font-size:16px;
+        background:var(--rose); color:#fff;
+      }
+      .btn:active{ transform:scale(.97); }
+      .iconbtn{
+        width:40px; height:40px; border-radius:10px; border:1px solid rgba(255,255,255,.2);
+        background:rgba(18,9,7,.75); color:#fff; font-size:17px; cursor:pointer;
+        display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
+      }
+      .iconbtn:active{ transform:scale(.94); }
+      .btn.ghost{ background:transparent; color:var(--rose); border:2px solid var(--rose); }
+      .btn.pick{ background:var(--ink); color:var(--bg); }
+      .card.selected .btn.pick{ background:var(--rose); color:#fff; }
+      .next-heart{ display:inline-flex; vertical-align:-6px; margin-left:4px; }
+      .next-heart svg{ width:24px; height:23px; }
+
+      /* ---------- stack stage ---------- */
+      #stackStage{
+        height:460px; max-width:560px; cursor:pointer; touch-action:manipulation;
+        background:linear-gradient(180deg,#ffe3ae 0%,#ffb38a 42%,#ff7e6b 78%,#e63950 135%);
+      }
+      #stackStage::before{
+        content:""; position:absolute; width:110px; height:110px; border-radius:50%;
+        background:rgba(255,244,200,.85); top:34px; right:36px;
+        box-shadow:0 0 60px 24px rgba(255,240,190,.45);
+      }
+      #stackWorld{ position:absolute; inset:0; will-change:transform; }
+      .layer{
+        position:absolute; height:36px; border-radius:11px;
+        border:2px solid rgba(255,255,255,.45);
+        display:flex; align-items:center; justify-content:center;
+        color:rgba(255,255,255,.92); font-size:17px; line-height:1;
+        box-shadow:0 3px 8px rgba(120,10,40,.25);
+      }
+      .layer.base{ background:#5b2333 !important; border-color:rgba(255,255,255,.25); }
+      .layer.falling{ transition:transform .65s ease-in, opacity .65s ease-in; z-index:3; }
+
+      /* ---------- pick section ---------- */
+      .pick-box{
+        border:2px dashed var(--rose); border-radius:22px; padding:20px; margin:26px 0 8px;
+        text-align:center; background:var(--chip);
+      }
+      .pick-box h2{ font-family:"Baloo 2",sans-serif; font-weight:800; font-size:24px; margin:0 0 6px; }
+      .pick-box p{ margin:0; color:var(--muted); font-size:15.5px; line-height:1.55; }
+      .pick-box p b{ color:var(--rose-dark); }
+      @media (prefers-color-scheme: dark){ .pick-box p b{ color:#ff9db1; } }
+      .foot{ text-align:center; color:var(--muted); font-size:13.5px; margin-top:18px; }
+      @media (prefers-reduced-motion: reduce){
+        html{ scroll-behavior:auto; }
+        .toast{ transition:none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div style="margin:10px 0 14px;"><a class="iconbtn" href="index.html" aria-label="Back to menu">🏠</a></div>
+<section class="card" id="card-stars">
+        <div class="card-head">
+          <div class="num teal">3</div>
+          <div>
+            <h2>Connect the Stars</h2>
+            <p class="how">Tap the stars in order — 1, 2, 3…</p>
+          </div>
+          <div class="badges">
+            <span class="badge genre">Relaxing · Night sky</span>
+          </div>
+        </div>
+        <div class="stage narrow">
+          <canvas class="game" id="starCanvas" width="1440" height="1600" aria-label="Connect the Stars game board"></canvas>
+          <div class="toast" id="starToast"></div>
+        </div>
+        <div class="hud">
+          <span class="stat" id="starStats">Stars <b>0 / 12</b></span>
+          <span class="spacer"></span>
+          <button class="btn ghost" id="starRestart" type="button">New shape</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+/* ================= shared helpers ================= */
+    var LINES = [
+      "Every heart, only for you.",
+      "Harsh loves Ancy.",
+      "You make my heart smile.",
+      "My favourite place is with you.",
+      "From my heart, only you.",
+      "You are my sweetest hello.",
+      "My heart chose you.",
+      "Forever and always."
+    ];
+    var lineIdx = 0;
+    function nextLine(){ var s = LINES[lineIdx % LINES.length]; lineIdx++; return s; }
+
+    function showToast(el, text, hold){
+      el.textContent = text;
+      el.classList.add("show");
+      clearTimeout(el._t);
+      el._t = setTimeout(function(){ el.classList.remove("show"); }, hold || 1900);
+    }
+
+    var actx = null;
+    function ac(){
+      if(!actx){
+        try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ actx = null; }
+      }
+      if(actx && actx.state === "suspended"){ actx.resume(); }
+      return actx;
+    }
+    function tone(freq, delay, dur, vol){
+      var a = ac(); if(!a) return;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sine"; o.frequency.value = freq;
+      var s = a.currentTime + (delay || 0);
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(vol || 0.1, s + 0.09);
+      g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(s); o.stop(s + dur + 0.05);
+    }
+    /* soft relaxing chime — slow attack, long fade, no coin-like ding */
+    function softChime(base){
+      tone(base, 0, 0.9, 0.10);
+      tone(base * 1.5, 0.07, 1.0, 0.07);
+      tone(base * 2, 0.14, 1.1, 0.045);
+    }
+    function lowThud(){ tone(160, 0, 0.35, 0.07); }
+
+    function heartPath(ctx, x, y, s){
+      ctx.beginPath();
+      ctx.moveTo(x, y + s * 0.82);
+      ctx.bezierCurveTo(x - s * 1.25, y + s * 0.05, x - s * 0.78, y - s * 0.95, x, y - s * 0.28);
+      ctx.bezierCurveTo(x + s * 0.78, y - s * 0.95, x + s * 1.25, y + s * 0.05, x, y + s * 0.82);
+      ctx.closePath();
+    }
+/* ================= GAME 3 : CONNECT THE STARS ================= */
+    (function(){
+      var cv = document.getElementById("starCanvas");
+      var ctx = cv.getContext("2d");
+      var W = 720, H = 800, SC = 2;
+      ctx.setTransform(SC, 0, 0, SC, 0, 0);
+      var toast = document.getElementById("starToast");
+      var statsEl = document.getElementById("starStats");
+      var N = 12;
+      var NOTES = [262, 294, 330, 392, 440, 523, 587, 659, 784, 880, 1047, 1175];
+
+      var pts, bgStars, nextIdx, done, startT, shakeIdx, shakeT, particles;
+
+      function genPoints(){
+        pts = [];
+        var cx = W / 2, cy = H / 2 - 10, s = 15.2;
+        var start = Math.random() * Math.PI * 2;
+        var dir = Math.random() < 0.5 ? 1 : -1;
+        for(var i = 0; i < N; i++){
+          var t = start + dir * i * (Math.PI * 2 / N);
+          var x = 16 * Math.pow(Math.sin(t), 3);
+          var y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+          pts.push({ x: cx + x * s, y: cy - y * s });
+        }
+      }
+      function genBg(){
+        bgStars = [];
+        for(var i = 0; i < 110; i++){
+          bgStars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.8 + 0.4, ph: Math.random() * 6.28 });
+        }
+      }
+      function reset(){
+        genPoints(); genBg();
+        nextIdx = 0; done = false; startT = null; shakeIdx = -1; particles = [];
+        statsEl.innerHTML = "Stars <b>0 / " + N + "</b>";
+      }
+
+      function draw(now){
+        ctx.fillStyle = "#0d1128";
+        ctx.fillRect(0, 0, W, H);
+
+        var i, p;
+        for(i = 0; i < bgStars.length; i++){
+          var b = bgStars[i];
+          ctx.globalAlpha = 0.35 + 0.3 * Math.sin(now / 700 + b.ph);
+          ctx.fillStyle = "#cdd7ff";
+          ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        /* completed heart fill */
+        if(done){
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for(i = 1; i < N; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.closePath();
+          ctx.fillStyle = "rgba(230,57,80,.28)"; ctx.fill();
+        }
+
+        /* connecting lines */
+        ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 3.5; ctx.lineJoin = "round";
+        ctx.shadowColor = "rgba(255,209,102,.7)"; ctx.shadowBlur = 10;
+        ctx.beginPath();
+        var upto = done ? N : nextIdx;
+        for(i = 0; i < upto; i++){
+          p = pts[i];
+          if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        if(done) ctx.closePath();
+        if(upto > 1 || done) ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        /* points */
+        for(i = 0; i < N; i++){
+          p = pts[i];
+          var x = p.x, y = p.y;
+          if(i === shakeIdx && now - shakeT < 350) x += Math.sin(now / 28) * 5;
+
+          if(i === nextIdx && !done){
+            var pr = 26 + 6 * Math.sin(now / 260);
+            ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.arc(x, y, pr, 0, 7); ctx.stroke();
+          }
+          ctx.beginPath(); ctx.arc(x, y, 21, 0, 7);
+          if(i < nextIdx || done) ctx.fillStyle = "#ffb703";
+          else if(i === nextIdx) ctx.fillStyle = "#e63950";
+          else ctx.fillStyle = "#2a3358";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 2; ctx.stroke();
+          ctx.fillStyle = (i < nextIdx || done) ? "#3a2403" : "#ffffff";
+          ctx.font = "800 21px Nunito, sans-serif";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText(String(i + 1), x, y + 1);
+        }
+        ctx.textBaseline = "alphabetic";
+
+        /* celebration particles */
+        for(i = particles.length - 1; i >= 0; i--){
+          var q = particles[i];
+          q.x += q.vx; q.y += q.vy; q.vy += 0.04; q.life -= 0.012;
+          if(q.life <= 0){ particles.splice(i, 1); continue; }
+          ctx.globalAlpha = Math.max(q.life, 0);
+          ctx.fillStyle = q.color;
+          heartPath(ctx, q.x, q.y, q.s); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        if(!done && nextIdx === 0){
+          ctx.fillStyle = "rgba(255,255,255,.65)";
+          ctx.font = "700 20px Nunito, sans-serif"; ctx.textAlign = "center";
+          ctx.fillText("Start from Star 1 — tap in order", W / 2, H - 26);
+        }
+        requestAnimationFrame(draw);
+      }
+
+      function celebrate(){
+        done = true;
+        var secs = startT ? ((performance.now() - startT) / 1000).toFixed(1) : "0.0";
+        statsEl.innerHTML = "Done! Shape complete in <b>" + secs + "s</b>";
+        for(var i = 0; i < 40; i++){
+          var a = Math.random() * Math.PI * 2, sp = 1 + Math.random() * 3.4;
+          particles.push({ x: W/2, y: H/2, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 1.4,
+            life: 1, color: ["#e63950","#ffb703","#ff7aa2"][i % 3], s: 6 + Math.random()*8 });
+        }
+        softChime(523); setTimeout(function(){ softChime(659); }, 180);
+        showToast(toast, "Harsh ♥ Ancy — " + nextLine(), 3000);
+      }
+
+      cv.addEventListener("pointerdown", function(e){
+        if(done) return;
+        var rect = cv.getBoundingClientRect();
+        var x = (e.clientX - rect.left) / rect.width * W;
+        var y = (e.clientY - rect.top) / rect.height * H;
+        var bestI = -1, bd = 1e12;
+        for(var i = 0; i < N; i++){
+          var dx = pts[i].x - x, dy = pts[i].y - y, d = dx*dx + dy*dy;
+          if(d < bd){ bd = d; bestI = i; }
+        }
+        if(bestI < 0 || bd > 52 * 52) return;
+        if(bestI === nextIdx){
+          if(startT === null) startT = performance.now();
+          tone(NOTES[nextIdx], 0, 0.7, 0.08);
+          nextIdx++;
+          statsEl.innerHTML = "Stars <b>" + nextIdx + " / " + N + "</b>";
+          if(nextIdx === N) celebrate();
+        } else if(bestI > nextIdx){
+          shakeIdx = bestI; shakeT = performance.now();
+          lowThud();
+          showToast(toast, "Tap star " + (nextIdx + 1) + " first", 1300);
+        }
+      });
+      document.getElementById("starRestart").addEventListener("click", function(){
+        reset(); showToast(toast, "New shape ready!");
+      });
+
+      reset();
+      requestAnimationFrame(draw);
+    })();
+    </script>
+  </body>
+</html>
