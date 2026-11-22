@@ -285,6 +285,7 @@ function reset(){ S.lane=0;S.targetLane=0;S.x=0;S.jumpY=0;S.jumpV=0;S.sliding=0;
   const cn=document.getElementById('countNum'); if(cn)cn.style.display='none'; hideAncySay();
   for(const e of entities){ scene.remove(e.obj); disposeObj(e.obj); } entities=[];
   for(const p of particles){ scene.remove(p.mesh); disposeObj(p.mesh); } particles=[];
+  curPR=minPR; try{ renderer.setPixelRatio(curPR); }catch(e){}
 }
 function toast(msg,ms){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),ms||1900); }
 /* ---------- CHARACTER VOICES — dialogues are SPOKEN out loud, not just text ---------- */
@@ -5100,7 +5101,7 @@ three/build/three.module.js:
 /* ================= THREE.JS SCENE ================= */
 const stageEl=document.getElementById('stage'), glEl=document.getElementById('gl');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-let curPR=Math.min(window.devicePixelRatio||1,2.25); const minPR=Math.min(curPR,1.5);
+const maxPR=Math.min(window.devicePixelRatio||1,2.25); const minPR=Math.min(maxPR,1.5); let curPR=minPR;
 renderer.setPixelRatio(curPR);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFShadowMap;
@@ -5821,7 +5822,8 @@ function render(dt){
   if(S.mode==='count'){ S.countT-=dt; S.time+=dt; S.runPhase+=dt*10;
     const cEl=document.getElementById('countNum'); const c=Math.ceil(S.countT);
     if(S.countT<=0){ S.mode='run'; cEl.style.display='none'; sfx.countBeep(true); toast('🏃 RUN HARSH! Ancy is right behind you!',2000); sayAncy("Run, vave! I'm right behind you!",2400,'high'); }
-    else { cEl.style.display='block'; cEl.textContent=c; if(c!==S.lastCount){ S.lastCount=c; sfx.countBeep(false); } } }
+    else { cEl.style.display='block'; cEl.textContent=c; if(c!==S.lastCount){ S.lastCount=c; sfx.countBeep(false); } }
+    if(S.warmStep===8) spawnObstacle(); else if(S.warmStep===16) spawnHearts(); S.warmStep++; }
   if(S.mode==='catch'){ S.catchT+=dt; S.time+=dt;
     if(!S.grabbed&&S.catchT>=0.55){ S.grabbed=true; S.shake=0.7; burst(S.x*2.3+0.3,1.6,0.4,0,16); burst(S.x*2.3+0.3,1.1,0.4,2,10); floater(new THREE.Vector3(S.x*2.3,2.7,0),'💕 CAUGHT YOU!','#ff7a93'); }
     if(S.catchT>=2.1){ gameOver(); } }
@@ -5969,7 +5971,7 @@ function updateHUD(){
 }
 
 /* ================= FLOW ================= */
-function startGame(){ ac(); sfx.click(); reset(); S.mode='count'; S.countT=3.2; S.lastCount=9;
+function startGame(){ ac(); sfx.click(); reset(); fpsAcc=0; fpsN=0; S.warmStep=0; S.mode='count'; S.countT=3.2; S.lastCount=9;
   banterT=6+Math.random()*3; lastTalkT=-99;
   sayLine(pickLine(START_LINES,'start'),1700);
   document.getElementById('startScreen').classList.add('hidden');
@@ -6020,14 +6022,15 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden) pauseGame
 /* ================= RESIZE + LOOP ================= */
 function resize(){ const w=glEl.clientWidth||stageEl.clientWidth, h=glEl.clientHeight||stageEl.clientHeight; if(!w||!h)return; renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix(); }
 window.addEventListener('resize',resize);
-resize(); reset(); updateHUD();
+resize(); reset(); updateHUD(); try{ renderer.compile(scene,camera); }catch(e){}
 let last=performance.now(), fpsAcc=0, fpsN=0;
 function loop(now){ requestAnimationFrame(loop); const rawDt=(now-last)/1000||0; const dt=Math.min(rawDt,0.05); last=now;
-  /* adaptive quality: if this device can't hold ~42fps, step the render
-     resolution down (1.6 → 1.35 → 1.1 → 1) until the game runs smooth */
+  /* adaptive quality: start at the smooth resolution (1.5x) and step UP only
+     when the device proves it holds 50fps; step DOWN if it drops below ~34fps */
   if(rawDt>0&&rawDt<0.25){ fpsAcc+=rawDt; fpsN++;
-    if(fpsAcc>=2.5){ const avg=fpsAcc/fpsN; fpsAcc=0; fpsN=0;
-      if(avg>1/34&&curPR>minPR){ curPR=Math.max(minPR,Math.round((curPR-0.25)*100)/100); renderer.setPixelRatio(curPR); resize(); } } }
+    if(fpsAcc>=1.5){ const avg=fpsAcc/fpsN; fpsAcc=0; fpsN=0;
+      if(avg>1/34&&curPR>minPR){ curPR=Math.max(minPR,Math.round((curPR-0.25)*100)/100); renderer.setPixelRatio(curPR); resize(); }
+      else if(avg<1/50&&curPR<maxPR){ curPR=Math.min(maxPR,Math.round((curPR+0.25)*100)/100); renderer.setPixelRatio(curPR); resize(); } } }
   try{ if(S.mode!=='pause') render(dt); }catch(err){ const b=document.getElementById('errBox'); if(b&&b.style.display!=='block'){ b.style.display='block'; b.textContent='⚠️ '+(err&&err.message?err.message:err); } }
 }
 requestAnimationFrame(loop);
