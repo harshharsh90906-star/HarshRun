@@ -107,6 +107,7 @@
       }
       .btn:active{ transform:scale(.97); }
       .btn.ghost{ background:transparent; color:var(--rose); border:2px solid var(--rose); }
+      .btn.shoot{ font-size:18px; padding:10px 24px; box-shadow:0 4px 14px rgba(230,57,80,.4); }
       .btn.pick{ background:var(--ink); color:var(--bg); }
       .card.selected .btn.pick{ background:var(--rose); color:#fff; }
       .next-heart{ display:inline-flex; vertical-align:-6px; margin-left:4px; }
@@ -176,9 +177,10 @@
             <span class="next-heart"><svg viewBox="0 0 32 30" aria-hidden="true"><path id="popNextPath" fill="#e63950" d="M16 28C8 21 3 16.5 3 10.8 3 6.4 6.3 3 10.4 3c2.3 0 4.4 1.3 5.6 3.2C17.2 4.3 19.3 3 21.6 3 25.7 3 29 6.4 29 10.8 29 16.5 24 21 16 28z"/></svg></span>
           </span>
           <span class="spacer"></span>
+          <button class="btn shoot" id="popShoot" type="button">❤️ Shoot</button>
           <button class="btn ghost" id="popRestart" type="button">Restart</button>
         </div>
-        <p class="how" style="margin-top:10px;">Kaise khelein: canvas pe <b>drag karke aim</b> karo, <b>chhodo to shoot</b>. Board bharne se pehle saaf karte raho. Jitne zyada hearts pop karoge, aim line utni lambi hogi.</p>
+        <p class="how" style="margin-top:10px;">Kaise khelein: canvas pe <b>drag karke aim</b> karo — line set rahegi — phir <b>❤️ Shoot</b> dabao. Board bharne se pehle saaf karte raho. Jitne zyada hearts pop karoge, aim line utni lambi hogi.</p>
       </section>
     </main>
 
@@ -294,7 +296,7 @@
       var R = 27, COLS = 13, ROWS = 13, DY = R * 1.74;
       var DANGER_Y = H - 200, SH_Y = H - 72, SH_X = W / 2;
 
-      var grid, flying, particles, rings, tick, aimAngle, cur, next, score, pops;
+      var grid, flying, particles, rings, floaters, tick, aimHintShown, aimAngle, cur, next, score, pops;
       var toast = document.getElementById("popToast");
       var scoreEl = document.getElementById("popScore");
       var popsEl = document.getElementById("popPops");
@@ -323,7 +325,7 @@
             grid[r].push(r < 5 ? randOf(COLORS) : null);
           }
         }
-        flying = null; particles = []; rings = []; tick = 0;
+        flying = null; particles = []; rings = []; floaters = []; tick = 0; aimHintShown = false;
         aimAngle = -Math.PI / 2;
         score = 0; pops = 0;
         cur = randPresent(); next = randPresent();
@@ -392,6 +394,7 @@
         var cx = 0, cy = 0;
         for(var i3 = 0; i3 < group.length; i3++){ cx += cellX(group[i3][0], group[i3][1]); cy += cellY(group[i3][0]); }
         rings.push({ x: cx / group.length, y: cy / group.length, r: R, life: 1 });
+        floaters.push({ x: cx / group.length, y: cy / group.length, life: 1 });
         score += group.length * 10;
         pops++;
         softChime(392 + (pops % 5) * 40);
@@ -475,6 +478,11 @@
           rg.r += 3.5; rg.life -= 0.045;
           if(rg.life <= 0) rings.splice(ri, 1);
         }
+        for(var fi = floaters.length - 1; fi >= 0; fi--){
+          var fl = floaters[fi];
+          fl.y -= 0.9; fl.life -= 0.018;
+          if(fl.life <= 0) floaters.splice(fi, 1);
+        }
       }
 
       function draw(){
@@ -503,7 +511,7 @@
 
         /* aim guide — full trajectory to the landing heart/top, grows with pops */
         if(!flying){
-          var maxLen = Math.min(500 + pops * 25, 1600);
+          var maxLen = Math.min(1000 + pops * 25, 1600);
           var ax = SH_X, ay = SH_Y, dx = Math.cos(aimAngle), dy = Math.sin(aimAngle);
           var pts = [[ax, ay]], len = 0, landed = null, stepLen = 6;
           while(len < maxLen){
@@ -571,6 +579,20 @@
           ctx.beginPath(); ctx.arc(rg2.x, rg2.y, rg2.r, 0, 7); ctx.stroke();
         }
         ctx.globalAlpha = 1;
+        /* H❣️A pop animation */
+        for(var fi2 = 0; fi2 < floaters.length; fi2++){
+          var fl2 = floaters[fi2];
+          var fs = Math.round(36 * (0.7 + (1 - fl2.life) * 0.5));
+          ctx.save();
+          ctx.globalAlpha = Math.max(fl2.life, 0);
+          ctx.font = "bold " + fs + "px system-ui, sans-serif";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.lineWidth = 5; ctx.strokeStyle = "#ffffff";
+          ctx.strokeText("H\u2763\uFE0FA", fl2.x, fl2.y);
+          ctx.fillStyle = "#e63950";
+          ctx.fillText("H\u2763\uFE0FA", fl2.x, fl2.y);
+          ctx.restore();
+        }
       }
 
       function loop(){ step(); draw(); requestAnimationFrame(loop); }
@@ -589,7 +611,9 @@
       cv.addEventListener("pointerdown", function(e){ unlockAudio(); dragging = true; aimAt(pointerPos(e)); cv.setPointerCapture(e.pointerId); });
       document.addEventListener("pointerdown", unlockAudio, { once: true });
       cv.addEventListener("pointermove", function(e){ if(dragging) aimAt(pointerPos(e)); });
-      cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); shoot(); } dragging = false; });
+      cv.addEventListener("pointerup", function(e){ if(dragging){ aimAt(pointerPos(e)); } dragging = false; if(!aimHintShown){ aimHintShown = true; showToast("Aim set! Ab \u2764\uFE0F Shoot dabao"); } });
+      document.getElementById("popShoot").addEventListener("click", function(){ unlockAudio(); shoot(); });
+      document.addEventListener("keydown", function(e){ if(e.code === "Space"){ e.preventDefault(); unlockAudio(); shoot(); } });
       cv.addEventListener("pointercancel", function(){ dragging = false; });
       document.getElementById("popRestart").addEventListener("click", function(){
         blip(520, 0.08, 0.08);
